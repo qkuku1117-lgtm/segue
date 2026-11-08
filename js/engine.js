@@ -26,7 +26,10 @@ const Engine = (() => {
     const lim = ctx.createDynamicsCompressor();
     lim.threshold.value = -4; lim.knee.value = 2; lim.ratio.value = 12; lim.attack.value = 0.002; lim.release.value = 0.12;
     masterAn = ctx.createAnalyser(); masterAn.fftSize = 2048;
-    masterIn.connect(lim).connect(masterAn).connect(ctx.destination);
+    // ?mute keeps everything running (meters, scoring) but sends nothing to the speakers: for silent testing
+    const out = ctx.createGain();
+    out.gain.value = /[?&]mute\b/.test(location.search) ? 0 : 1;
+    masterIn.connect(lim).connect(masterAn).connect(out).connect(ctx.destination);
     // echo bus: post-fader sends land here, the tail rings on after a fader cut
     const echoIn = ctx.createGain();
     echoDelay = ctx.createDelay(4); echoDelay.delayTime.value = 0.36;

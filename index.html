@@ -53,6 +53,8 @@
   --sec1: #f5f5f7; --st1: #000000; --sec2: #aeaeb2; --st2: #000000; --sec3: #636366; --st3: #ffffff; --sec4: #3a3a3c; --st4: #f5f5f7;
   color-scheme: dark;
 }
+/* on the stage the lanes scroll all the time; full white would glare, so the loudest sections sit a step lower */
+:root[data-stage="practice"] { --sec1: #c7c7cc; --sec2: #8e8e93; --st2: #000000; --sec3: #48484a; --sec4: #2c2c2e; }
 * { box-sizing: border-box; }
 html, body { background: var(--ink); color: var(--text); transition: background-color var(--dur-panel) ease; }
 body { margin: 0; font-family: var(--body); font-size: 14px; line-height: 1.5; letter-spacing: -0.005em; -webkit-font-smoothing: antialiased; }
