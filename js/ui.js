@@ -8,6 +8,7 @@
   const readColors = () => ['ink', 'card', 'booth', 'booth-2', 'rail', 'text', 'dim', 'faint', 'deck-a', 'deck-b', 'coach', 'on-accent', 'warn', 'hot', 'sec1', 'sec2', 'sec3', 'sec4', 'st1', 'st2', 'st3', 'st4']
     .forEach(k => { C[k] = getComputedStyle(document.documentElement).getPropertyValue('--' + k).trim(); });
   const deckColor = id => id === 'A' ? C['deck-a'] : C['deck-b'];
+  const FINE = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   const FONT = '-apple-system, BlinkMacSystemFont, Helvetica Neue, PingFang SC, sans-serif';
 
   function h(tag, attrs, ...kids) {
@@ -60,6 +61,8 @@
     play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 5.8v12.4l9.6-6.2z" fill="currentColor"/></svg>',
     pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="13.5" y="5" width="4" height="14" rx="1.2" fill="currentColor"/></svg>',
     upload: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>',
+    chev: d => `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d < 0 ? 'm15 5-7 7 7 7' : 'm9 5 7 7-7 7'}"/></svg>`,
+    stop: '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="3" fill="currentColor"/></svg>',
     check: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>',
     sync: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12a7 7 0 0 1 12-4.9L19 9M19 4.5V9h-4.5M19 12a7 7 0 0 1-12 4.9L5 15M5 19.5V15h4.5"/></svg>',
   };
@@ -167,7 +170,7 @@
         f.addEventListener('pointermove', move); f.addEventListener('pointerup', up); f.addEventListener('pointercancel', up);
       });
       f.addEventListener('dblclick', () => this.glide(this.def));
-      f.addEventListener('wheel', e => { e.preventDefault(); this.input(this.value - Math.sign(e.deltaY) * 0.03 * (this.max - this.min)); }, { passive: false });
+      f.addEventListener('wheel', e => { if (document.activeElement !== f) return; e.preventDefault(); this.input(this.value - Math.sign(e.deltaY) * 0.03 * (this.max - this.min)); }, { passive: false });
       f.addEventListener('keydown', e => {
         const step = (this.max - this.min) * (e.shiftKey ? 0.1 : 0.025);
         const k = { ArrowUp: step, ArrowRight: step, ArrowDown: -step, ArrowLeft: -step, PageUp: step * 4, PageDown: -step * 4 }[e.key];
@@ -271,18 +274,20 @@
     card.append(h('div', { class: 'track-head' },
       h('i', { class: `dk lg dk-${id}`, 'aria-label': `Deck ${id}` }, id),
       h('div', { class: 'track-info' },
-        h('div', { class: 'track-title' }, t && t.title ? t.title : '等待音频'),
-        h('div', { class: 'track-sub' }, ready ? `${an.bpm} BPM · ${an.key.name} · ${an.key.camelot}` : t ? t.step || '准备中' : '上传或拖入歌曲')),
+        h('div', { class: 'track-title' }, t && t.title ? t.title : '还没有歌'),
+        h('div', { class: 'track-sub' }, ready ? `${an.bpm} BPM · ${an.key.name} · ${an.key.camelot}` : t ? t.step || '准备中' : '拖一首歌进来')),
       uploadBtn(id)));
     if (!ready) {
-      card.append(h('div', { class: 'loading' }, t && t.error ? h('div', { class: 'track-err' }, t.error) : h('div', { class: 'bars' }, h('i'), h('i'), h('i'), h('i'), h('i'))));
+      card.append(h('div', { class: 'loading' }, t && t.error
+        ? h('div', { class: 'track-err' }, h('span', {}, t.error), h('button', { class: 'btn sm quiet', onclick: () => loadDemo(id) }, '先用示例曲'))
+        : h('div', { class: 'bars' }, h('i'), h('i'), h('i'), h('i'), h('i'))));
       return;
     }
     if (t.head == null) t.head = an.barTime(an.firstDrop ?? 0);
     // the row of capsules is the scrubber: a tap plays the section under the finger, a drag sets the exact spot
     const secs = an.sections.map(sec => {
       const name = SEC_LABEL[sec.type] || sec.type, from = an.barTime(sec.start), to = Math.min(an.duration, an.barTime(sec.end));
-      return h('button', { class: `sec s${secTier(sec.type)}`, style: `flex:${(to - from).toFixed(2)} 1 0`, title: name, 'data-name': name, 'aria-label': `从${name}开始试听`, onclick: e => { if (e.detail === 0) playFrom(id, from); } }, name);
+      return h('button', { class: `sec s${secTier(sec.type)}`, style: `flex:${(to - from).toFixed(2)} 1 0`, title: name, 'data-name': name, 'aria-label': `从${name}开始试听`, onclick: e => { if (e.detail === 0) playFrom(id, from); } }, h('span', {}, name));
     });
     const strip = h('div', { class: 'strip', role: 'group', 'aria-label': `${t.title} 段落` }, ...secs, h('div', { class: 'playhead' }));
     card.append(strip);
@@ -290,9 +295,9 @@
     card.append(h('div', { class: 'track-foot' },
       h('button', { class: 'play-btn', 'data-preview': id, 'aria-label': '播放或暂停试听', onclick: () => togglePreview(id) }),
       h('span', { class: 'track-time' }, h('span', { 'data-now': '' }), h('small', {}, ` / ${fmtTime(an.duration)}`)),
-      h('div', { class: 'grid-fix', title: '小节线没对上第一拍时，手动挪一拍' }, '网格',
-        h('button', { 'aria-label': '小节线左移一拍', onclick: () => nudgeGrid(id, -1) }, '◀'),
-        h('button', { 'aria-label': '小节线右移一拍', onclick: () => nudgeGrid(id, 1) }, '▶'))));
+      h('div', { class: 'grid-fix', title: '第一拍没对上？挪一拍' }, '对拍',
+        h('button', { 'aria-label': '小节线左移一拍', onclick: () => nudgeGrid(id, -1), html: ICON.chev(-1) }),
+        h('button', { 'aria-label': '小节线右移一拍', onclick: () => nudgeGrid(id, 1), html: ICON.chev(1) }))));
     setHead(id, t.head);
     previewButtons();
     // a capsule too narrow for its name stays blank; the name is still its tooltip
@@ -301,7 +306,7 @@
   function uploadBtn(id) {
     const input = h('input', { type: 'file', accept: 'audio/*', 'aria-label': `为 Deck ${id} 选择音频文件` });
     input.addEventListener('change', () => { if (input.files[0]) loadFile(id, input.files[0]); });
-    return h('label', { class: 'icon-btn file-btn', title: '换歌：选择文件，或拖进这张卡片', html: ICON.upload }, input);
+    return h('label', { class: 'icon-btn file-btn', title: '换一首（也可以直接拖进这张卡片）', 'aria-label': `为 Deck ${id} 换一首歌`, html: ICON.upload }, input);
   }
   function setHead(id, sec) {
     const t = S.tracks[id], card = $('#track' + id);
@@ -319,7 +324,8 @@
     const ready = A && A.status === 'ready' && B && B.status === 'ready';
     $('#swapBtn').disabled = !ready;
     if (!ready) {
-      box.append(h('div', { class: 'lead', html: wheelSVG(null, null) }), h('span', { class: 'track-sub' }, '分析中…'));
+      const failed = [A, B].some(t => t && t.status === 'error');
+      box.append(h('div', { class: 'lead', html: wheelSVG(null, null) }), h('span', { class: 'track-sub' }, failed ? '换一首就能继续' : '分析中…'));
       return;
     }
     const c = Analysis.compat(A.an, B.an);
@@ -328,7 +334,7 @@
     box.append(
       h('div', { class: 'lead', title: `Camelot 调性轮盘：${A.an.key.camelot} → ${B.an.key.camelot}` },
         h('span', { html: wheelSVG(A.an.key, B.an.key) }),
-        h('div', { class: 'score' }, h('b', {}, String(c.overall)), h('span', {}, '匹配'))),
+        h('div', { class: 'score' }, h('b', {}, String(c.overall)), h('span', {}, '契合度'))),
       h('span', { class: 'sep' }),
       h('div', { class: 'fact' }, h('b', {}, `${A.an.key.camelot} → ${B.an.key.camelot}`), h('small', { class: keyCls }, c.rel)),
       h('div', { class: 'fact', title: `变速带来 ${c.semis >= 0 ? '+' : ''}${c.semis.toFixed(2)} 半音的音高变化` }, h('b', {}, `${A.an.bpm} → ${B.an.bpm}`), h('small', { class: bpmCls }, `B ${c.bpmPct >= 0 ? '加快' : '放慢'} ${Math.abs(c.bpmPct).toFixed(1)}%`)));
@@ -340,42 +346,57 @@
     let out = '<svg viewBox="0 0 40 40" role="img" aria-label="Camelot 调性轮盘">';
     for (let n = 1; n <= 12; n++) {
       const [x, y] = at(n, 16);
-      out += `<circle cx="${x}" cy="${y}" r="2" fill="${C.rail}"/>`;
+      out += `<circle cx="${x}" cy="${y}" r="2" fill="var(--rail)"/>`;
     }
-    if (ka) { const [x, y] = at(ka.num, 16); out += `<circle cx="${x}" cy="${y}" r="4" fill="${C.text}"/>`; }
-    if (kb) { const [x, y] = at(kb.num, 16); out += `<circle cx="${x}" cy="${y}" r="${ka && ka.num === kb.num ? 2 : 4}" fill="${C.coach}"/>`; }
+    if (ka) { const [x, y] = at(ka.num, 16); out += `<circle cx="${x}" cy="${y}" r="4" fill="var(--text)"/>`; }
+    if (kb) { const [x, y] = at(kb.num, 16); out += `<circle cx="${x}" cy="${y}" r="${ka && ka.num === kb.num ? 2 : 4}" fill="var(--coach)"/>`; }
     return out + '</svg>';
   }
 
+  const loadTok = { A: 0, B: 0 };
   async function loadDemo(id) {
-    const demo = Synth.DEMOS[id];
-    S.tracks[id] = { status: 'loading', step: '正在网页里合成示例曲…', title: demo.title, artist: demo.artist };
+    const demo = Synth.DEMOS[id], tok = ++loadTok[id];
+    S.tracks[id] = { status: 'loading', step: '正在生成示例曲…', title: demo.title, artist: demo.artist };
     trackCard(id);
     try {
       const buf = await demo.render();
-      await setTrack(id, buf, { title: demo.title, artist: demo.artist, source: 'demo' });
+      if (tok !== loadTok[id]) return;
+      await setTrack(id, buf, { title: demo.title, artist: demo.artist, source: 'demo' }, tok);
     } catch (e) {
-      S.tracks[id] = { status: 'error', step: '示例曲合成失败', error: '浏览器不支持离线音频合成，可以直接上传一首歌。' };
+      if (tok !== loadTok[id]) return;
+      S.tracks[id] = { status: 'error', step: '示例曲合成失败', error: '这个浏览器放不了示例曲，换 Chrome 或 Safari，或者上传一首歌。' };
       trackCard(id);
     }
   }
   async function loadFile(id, file) {
     if (S.preview) togglePreview(S.preview);
-    const title = file.name.replace(/\.[^.]+$/, '');
-    S.tracks[id] = { status: 'loading', step: '正在解码音频…', title, artist: '你上传的歌 · 只在本地分析' };
+    const title = file.name.replace(/\.[^.]+$/, ''), tok = ++loadTok[id];
+    const fail = error => { if (tok !== loadTok[id]) return; S.tracks[id] = { status: 'error', step: '没能用这首歌', title, error }; trackCard(id); refreshTracksUI(); };
+    if (file.type && !/^audio\/|^video\/mp4/.test(file.type)) return fail('这不是音频文件。试试 MP3、WAV 或 M4A。');
+    if (file.size > 120 * 1024 * 1024) return fail('文件太大了，选一首 120 MB 以内的歌。');
+    S.tracks[id] = { status: 'loading', step: '正在读取…', title, artist: '你的歌' };
     trackCard(id); refreshTracksUI();
-    try {
-      const buf = await Engine.context().decodeAudioData(await file.arrayBuffer());
-      await setTrack(id, buf, { title, artist: '你上传的歌 · 只在本地分析', source: 'user' });
-    } catch (e) {
-      S.tracks[id] = { status: 'error', step: '没能读取这个文件', title, error: '换一个 mp3、wav 或 m4a 文件试试。' };
-      trackCard(id); refreshTracksUI();
-    }
+    let buf;
+    try { buf = await Engine.context().decodeAudioData(await file.arrayBuffer()); }
+    catch (e) { return fail('读不了这个文件。试试 MP3、WAV 或 M4A。'); }
+    if (tok !== loadTok[id]) return;
+    if (buf.duration < 60) return fail('太短了，选一首 1 分钟以上的歌。');
+    if (buf.duration > 15 * 60) return fail('太长了，选一首 15 分钟以内的歌。');
+    await setTrack(id, buf, { title, artist: '你的歌', source: 'user' }, tok);
   }
-  async function setTrack(id, buffer, meta) {
+  async function setTrack(id, buffer, meta, tok) {
+    if (tok == null) tok = ++loadTok[id];
     S.tracks[id] = { ...meta, status: 'loading', step: '分析中…' };
     trackCard(id);
-    const an = await Analysis.analyze(buffer, step => { S.tracks[id].step = step + '…'; const el = $('#track' + id + ' .loading div:nth-child(2)'); if (el) el.textContent = step + '…'; });
+    let an;
+    try { an = await Analysis.analyze(buffer, step => { if (tok !== loadTok[id]) return; S.tracks[id].step = step + '…'; const el = $('#track' + id + ' .track-sub'); if (el) el.textContent = step + '…'; }); }
+    catch (e) { an = null; }
+    if (tok !== loadTok[id]) return;
+    // the plans need room: about 40 bars of A to play out and 16 of B to come in on
+    if (!an || an.nBars < 40 || !an.sections.length) {
+      S.tracks[id] = { ...meta, status: 'error', step: '没能用这首歌', error: !an ? '这首歌分析失败了，换一首试试。' : '这首歌太短或拍子太乱，换一首节奏稳定的歌。' };
+      trackCard(id); refreshTracksUI(); return;
+    }
     S.tracks[id] = { ...meta, status: 'ready', buffer, an };
     Engine.load(id, buffer, an);
     trackCard(id);
@@ -391,10 +412,12 @@
     renderCompat();
     const ready = ['A', 'B'].every(k => S.tracks[k] && S.tracks[k].status === 'ready');
     $('#toPlans').disabled = !ready;
-    if (ready) {
-      S.planset = Planner.make(S.tracks.A.an, S.tracks.B.an);
-      S.aiPlans = null; S.plan = null; S.result = null; S.picked = null;
-    } else S.planset = null;
+    $('#heroDemo').disabled = !ready;
+    // any change to the songs invalidates everything downstream of them
+    S.planset = ready ? Planner.make(S.tracks.A.an, S.tracks.B.an) : null;
+    S.aiPlans = null; S.plan = null; S.result = null; S.picked = null; S.lastDemo = null;
+    S.aiPlansAsked = false; S.aiPlansFailed = false; S.chat = [];
+    if (S.view !== 'tracks') go('tracks');
     updateNav();
   }
   function startPreview(id, sec) {
@@ -436,7 +459,7 @@
     let down = null;
     const an = () => S.tracks[id].an;
     const tAt = e => { const r = strip.getBoundingClientRect(); return clamp((e.clientX - r.left) / r.width) * an().duration; };
-    const secAt = t => an().sections.find(s => t >= an().barTime(s.start) && t < an().barTime(s.end)) || an().sections[an().sections.length - 1];
+    const secAt = t => an().sections.find(s => t >= an().barTime(s.start) && t < an().barTime(s.end)) || an().sections[an().sections.length - 1] || { start: 0 };
     strip.addEventListener('pointerdown', e => {
       strip.setPointerCapture(e.pointerId);
       down = { x: e.clientX };
@@ -480,7 +503,7 @@
   }
 
   /* ================= view 2 · plans ================= */
-  const PLAN_LINE = { swap: p => `叠 ${p.len} 小节，换低频`, filter: () => 'B 渐开，A 渐闷', echo: () => '回声甩尾，B 砸入' };
+  const PLAN_LINE = { swap: p => `两首叠 ${p.len} 小节，再换低音`, filter: () => 'B 慢慢变亮，A 慢慢变闷', echo: () => 'A 留个回声，B 直接进来' };
   function renderPlans() {
     const ps = S.planset;
     if (!ps) return;
@@ -489,7 +512,7 @@
     const pickId = ai ? ai.pick : ps.pickId, pick = ps.plans.find(p => p.id === pickId);
     if (!S.picked) S.picked = pickId;
     const pending = Coach.state === 'online' && !ai && !S.aiPlansFailed;
-    $('#verdict').textContent = ai ? ai.headline : pending ? 'AI 正在听这两首歌…' : `这两首歌最适合${pick.name}。`;
+    $('#verdict').textContent = ai ? ai.headline : pending ? 'Claude 正在看这两首歌…' : `这两首，用${pick.name}最顺。`;
     const box = $('#plans');
     box.innerHTML = '';
     ps.plans.forEach(p => {
@@ -497,7 +520,7 @@
         planArt(p),
         h('span', { class: 'plan-head' },
           h('span', {}, h('span', { class: 'plan-name' }, p.name), h('span', { class: 'plan-line' }, PLAN_LINE[p.id](p))),
-          h('span', { class: 'fit' }, h('b', {}, String(p.fit)), h('small', { class: p.id === pickId ? 'pick' : '' }, p.id === pickId ? 'AI 推荐' : '匹配'))),
+          h('span', { class: 'fit' }, h('b', {}, String(p.fit)), h('small', { class: p.id === pickId ? 'pick' : '' }, p.id === pickId ? (ai ? 'Claude 推荐' : '推荐') : '适合度'))),
         h('span', { class: 'plan-meta' },
           h('span', {}, `${p.len} 小节`),
           h('span', { class: 'dots', 'aria-label': `难度 ${p.difficulty} / 3` }, ...[1, 2, 3].map(i => h('i', { class: i <= p.difficulty ? 'on' : '' })))),
@@ -509,7 +532,7 @@
       const planset = ps;
       Coach.reviewPlans(A, B, ps).then(r => {
         if (S.planset !== planset) return;
-        if (r) S.aiPlans = r; else S.aiPlansFailed = true;
+        if (r && r.plans) S.aiPlans = r; else S.aiPlansFailed = true;
         if (S.view === 'plans') renderPlans();
       });
     }
@@ -551,9 +574,11 @@
   function askPanel(box) {
     box.innerHTML = '';
     const log = h('div', { class: 'ask-log', 'aria-live': 'polite' });
-    const input = h('input', { id: box.id + 'Input', placeholder: Coach.state === 'online' ? '问点什么…' : '离线时只能答上面几题', 'aria-label': '问 AI 教练' });
+    const input = h('input', { id: box.id + 'Input', placeholder: '问教练任何问题', 'aria-label': '问教练' });
+    let busy = false;
     const send = async q => {
-      q = q.trim(); if (!q) return;
+      q = q.trim(); if (!q || busy) return;
+      busy = true;
       input.value = '';
       log.append(h('div', { class: 'msg q' }, q));
       const a = h('div', { class: 'msg a' }, '…');
@@ -562,15 +587,16 @@
       if (Coach.state === 'online') {
         S.chat.push({ role: 'user', content: q });
         const text = await Coach.ask(S.chat.slice(-6), S.tracks.A, S.tracks.B, S.plan, t => { a.textContent = t; });
-        if (text) { a.textContent = text; S.chat.push({ role: 'assistant', content: text }); return; }
+        if (text) { a.textContent = text; S.chat.push({ role: 'assistant', content: text }); busy = false; return; }
         S.chat.pop();
       }
-      a.textContent = faq ? faq.a : '连不上 Claude 时，只能回答上面几题。';
+      a.textContent = faq ? faq.a : '现在没连上 Claude，先看看上面几个问题。';
+      busy = false;
     };
     box.append(
       h('h2', {}, '问教练'),
       h('div', { class: 'ask-chips' }, ...Coach.FAQ.map(f => h('button', { onclick: () => send(f.q) }, f.q))),
-      h('form', { onsubmit: e => { e.preventDefault(); send(input.value); } }, input, h('button', { class: 'btn', type: 'submit' }, '发送')),
+      Coach.state === 'online' ? h('form', { onsubmit: e => { e.preventDefault(); send(input.value); } }, input, h('button', { class: 'btn', type: 'submit', 'aria-label': '发送' }, '发送')) : '',
       log);
   }
 
@@ -585,8 +611,8 @@
     const ui = {};
     ui.title = h('div', { class: 't' }); ui.sub = h('div', { class: 's' });
     ui.cue = h('button', { class: 'tbtn cue', onclick: () => cuePressed(id), title: '停下时设置 CUE 点；播放时跳回 CUE 点' }, 'CUE');
-    ui.sync = h('button', { class: 'tbtn sync', onclick: () => syncPressed(id), title: id === 'B' ? '同步（S 键）' : '同步', 'aria-label': `同步 Deck ${id}`, html: ICON.sync.replace('<svg', '<svg width="20" height="20"') });
-    ui.play = h('button', { class: 'tbtn play', onclick: () => playPressed(id), title: id === 'B' ? '播放（空格键）' : '播放', 'aria-label': `播放或暂停 Deck ${id}` });
+    ui.sync = h('button', { class: 'tbtn sync', onclick: () => syncPressed(id), title: id === 'B' && FINE ? '同步（S）' : '同步', 'aria-label': `同步 Deck ${id}`, html: ICON.sync.replace('<svg', '<svg width="20" height="20"') });
+    ui.play = h('button', { class: 'tbtn play', onclick: () => playPressed(id), title: id === 'B' && FINE ? '播放（空格）' : '播放', 'aria-label': `播放或暂停 Deck ${id}` });
     const k = (ctrl, label) => new Ctl(id, ctrl, 'knob', label).el;
     const fader = new Ctl(id, 'fader', 'vf', '音量推子');
     const meter = h('i');
@@ -603,7 +629,7 @@
     const row = id => { const i = h('i'); deckUI[id + 'low'] = i; return h('div', { class: 'low-row' }, h('span', {}, id), h('u', {}, i)); };
     const low = h('div', { class: 'lowmeter', title: '两台同时亮满就是低频打架' }, h('span', {}, '低频'), row('A'), row('B'));
     deckUI.low = low;
-    deckUI.phase = h('div', { class: 'phase idle' }, h('i'), h('span', {}, '未起播'));
+    deckUI.phase = h('div', { class: 'phase idle' }, h('i'), h('span', {}, '还没对拍'));
     const xf = new Ctl('X', 'xf', 'hf', '交叉推子');
     return h('section', { class: 'mixer', 'aria-label': '调音台' }, low, deckUI.phase,
       h('div', { class: 'xfade' }, h('div', { class: 'ends' }, h('span', {}, 'A'), h('span', {}, 'B')), xf.el));
@@ -618,7 +644,8 @@
       if (s && id === 'A') endSessionEarly();
       return;
     }
-    if (s && id === 'B' && s.bStartRel == null && s.mode !== 'demo') {
+    if (s && s.mode === 'demo') takeOver();
+    if (s && id === 'B' && s.bStartRel == null) {
       const nb = Engine.playQuantized(d, other);
       s.bStartRel = nb / 4 - s.plan.startA; s.bStartBy = 'user';
       return;
@@ -628,6 +655,7 @@
   function cuePressed(id) {
     const d = Engine.decks[id];
     if (!d.buffer) return;
+    if (S.session) { toast('练习中先不用 CUE'); return; }
     if (d.playing) { Engine.stop(d); Engine.seek(d, S.cues[id]); }
     else {
       const an = d.an, b = Math.round((Engine.pos(d) - an.down0) / an.beat);
@@ -645,6 +673,7 @@
   }
 
   function selectPlan(id, mode) {
+    if (!S.planset) return go('tracks');
     S.plan = S.planset.plans.find(p => p.id === id);
     cancelSession();
     S.result = null;
@@ -659,17 +688,18 @@
     Engine.seek(A, S.cues.A); Engine.seek(B, S.cues.B);
   }
   function setMode(mode, fresh) {
+    if (mode === S.mode && !S.session && !fresh && mode !== 'demo') return;
     if (S.session) cancelSession();
     S.mode = mode;
-    $$('.seg button').forEach(b => b.classList.toggle('on', b.dataset.mode === mode));
+    $$('.seg button').forEach(b => { b.classList.toggle('on', b.dataset.mode === mode); b.setAttribute('aria-selected', b.dataset.mode === mode); });
     if (mode !== 'free' && S.plan) primeDecks();
     if (mode === 'demo') startSession();
-    else if (fresh && mode === 'guide') toast('先完成准备，再按开始');
+    else if (fresh && mode === 'guide') toast('先照提示摆好，再按开始');
     updateStartBtn();
   }
   function updateStartBtn() {
     const b = $('#startBtn');
-    b.textContent = S.session ? '■ 停止' : S.mode === 'free' ? '▶ 播放 A' : S.mode === 'demo' ? '▶ 再看一遍' : '▶ 开始';
+    b.innerHTML = (S.session ? ICON.stop : ICON.play.replace('<svg', '<svg width="14" height="14"')) + (S.session ? '停止' : S.mode === 'free' ? (Engine.decks.A && Engine.decks.A.playing ? '暂停 A' : '播放 A') : S.mode === 'demo' ? '再看一遍' : '开始');
     b.classList.toggle('primary', !S.session);
     b.classList.toggle('quiet', !!S.session);
   }
@@ -699,7 +729,7 @@
     s.mode = 'guide'; S.mode = 'guide';
     $$('.seg button').forEach(b => b.classList.toggle('on', b.dataset.mode === 'guide'));
     if (s.bStartRel != null && s.bStartBy === 'demo') s.bStartBy = 'ai';
-    toast('你接手了，照常计分');
+    toast('换你来了，开始计分');
     updateStartBtn();
   }
   function relNow() {
@@ -720,12 +750,12 @@
     S.session = null;
     stopAll(); clearGhosts(); updateStartBtn();
     if (s.mode === 'demo') {
-      S.lastDemoScore = result.total;
+      S.lastDemo = { plan: s.plan, score: result.total };
       setMode('guide');
       toast('示范结束，轮到你了');
       return;
     }
-    S.result = { plan: s.plan, result, rec: s.rec, meta: { bStartRel: s.bStartRel, bStartBy: s.bStartBy } };
+    S.result = { plan: s.plan, result, rec: s.rec, meta: { bStartRel: s.bStartRel, bStartBy: s.bStartBy }, tries: recordTry(s.plan.id, result.total) };
     updateNav();
     go('review');
   }
@@ -759,7 +789,7 @@
     B.offset = B.an.barTime(p.cueB) + (nb - startBeat) * B.an.beat;
     Engine.play(B, Engine.ctxTimeOf(A, A.an.down0 + nb * A.an.beat));
     s.bStartRel = p.playBar; s.bStartBy = 'ai';
-    toast('AI 代按了 PLAY，这步只算半分');
+    toast('帮你按了 B 的 PLAY，这一步记一半分');
   }
 
   function prepStatus(p) {
@@ -773,7 +803,7 @@
 
   function countSVG(frac, label, sub, color) {
     const r = 22, c = 2 * Math.PI * r;
-    return `<svg viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="${r}" fill="none" stroke="${C.rail}" stroke-width="4"/><circle cx="26" cy="26" r="${r}" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${(c * clamp(frac)).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 26 26)"/></svg><b>${label}</b>`;
+    return `<svg viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="${r}" fill="none" stroke="${C.rail}" stroke-width="4"/><circle cx="26" cy="26" r="${r}" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${(c * clamp(frac)).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 26 26)"/></svg><b>${label}${sub ? `<small>${sub}</small>` : ''}</b>`;
   }
 
   let lastCoachKey = '';
@@ -784,14 +814,14 @@
     const bothLow = Engine.deckLowShare(A) > 0.3 && Engine.deckLowShare(B) > 0.3;
     const phase = Engine.phaseErrorMs();
     deckUI.low.classList.toggle('clash', bothLow);
-    if (bothLow) alerts.push(['hot', '低频打架：两台的 LOW 不要同时开']);
+    if (bothLow) alerts.push(['hot', '低频打架 · 关掉一边的 LOW']);
     if (phase != null && Math.abs(phase) > 25 && Engine.deckLevel(A) > 0.05 && Engine.deckLevel(B) > 0.05) alerts.push(['hot', `鼓点错开 ${Math.round(Math.abs(phase))} ms，按 SYNC`]);
 
     let when = '', what = '', why = '', cnt = '', now = false;
     const ghosts = new Map(); const wanted = new Set();
     let stepIdx = null, stepN = 0;
     if (S.mode === 'free' || !p) {
-      when = '自由模式'; what = '两台随便玩';
+      when = '自由'; what = '随便玩，不计分';
       why = '';
       cnt = countSVG(0, '∞', '自由', C.faint);
     } else {
@@ -804,12 +834,12 @@
       if (!s || (relShown < 0 && unmet.length && !demo)) {
         // preparation
         if (unmet.length) {
-          when = s ? `准备 · 还有 ${Math.max(0, Math.ceil(-relShown * 4))} 拍进入过渡` : '准备';
+          when = s ? `准备 · ${Math.max(0, Math.ceil(-relShown * 4))} 拍后开始` : '准备';
           what = unmet.map(x => ins(x)).join(''); why = '';
           unmet.forEach(x => { if (x.ctrl === 'sync') wanted.add('B.sync'); else ghosts.set(`${x.deck}.${x.ctrl}`, [x.to, true]); });
         } else {
           when = '准备好了 · 第一步'; what = steps[0].actions.map(a => ins(a)).join('');
-          why = s ? '' : 'A 会提前 4 小节放起来';
+          why = s ? '' : 'A 会先放 4 小节，你有时间准备';
         }
         cnt = countSVG(prep.filter(x => x.done).length / prep.length, `${prep.filter(x => x.done).length}/${prep.length}`, '准备', C.coach);
       } else if (idx === -1) {
@@ -820,13 +850,13 @@
         const isPlay = st.actions.some(a => a.ctrl === 'play');
         if (beats > 0) {
           const bars = Math.floor(beats / 4), rem = Math.ceil(beats - bars * 4);
-          when = `第 ${st.bar} 小节 · ${demo ? 'AI 即将' : '马上'}`;
-          cnt = countSVG(1 - beats / 16, beats <= 4 ? String(Math.ceil(beats)) : `${bars}:${rem}`, beats <= 4 ? '拍后' : '小节:拍', C.coach);
+          when = `第 ${st.bar} 小节 · 准备`;
+          cnt = countSVG(1 - beats / 16, beats <= 4 ? String(Math.ceil(beats)) : String(Math.ceil(beats / 4)), beats <= 4 ? '拍' : '小节', C.coach);
           now = beats <= 4;
         } else {
           const prog = st.end > st.bar ? clamp((rel - st.bar) / (st.end - st.bar)) : 1;
-          when = `第 ${st.bar} 小节 · ${demo ? 'AI 正在做' : '现在'}`;
-          cnt = countSVG(prog, demo ? 'AI' : '现在', st.end > st.bar ? `${Math.round(prog * 100)}%` : '', C.coach);
+          when = `第 ${st.bar} 小节 · ${demo ? '示范中' : '现在'}`;
+          cnt = countSVG(prog, demo ? '示范' : '现在', '', C.coach);
           now = true;
         }
         what = st.actions.map(a => ins(a)).join('');
@@ -837,14 +867,14 @@
             if (rel >= a.bar - 2 && rel <= a.bar + a.dur + 0.5) ghosts.set(`${a.deck}.${a.ctrl}`, [rel < a.bar ? a.to : Planner.stateAt(p, rel)[a.deck][a.ctrl], st.actions.includes(a)]);
           }
         }
-        if (isPlay && !demo && beats <= 4 && beats > 0) alerts.push(['info', '数到 0 按 PLAY（空格）']);
+        if (isPlay && !demo && beats <= 4 && beats > 0) alerts.push(['info', FINE ? '看到“现在”就按 PLAY（空格）' : '看到“现在”就按 PLAY']);
       }
-      if (s && s.bStartBy === 'ai') alerts.push(['info', 'AI 代按了 B']);
+      if (s && s.bStartBy === 'ai') alerts.push(['info', '帮你按了 B']);
       if (s && s.bStartBy === 'user' && s.bStartRel != null) {
         const off = Math.round((s.bStartRel - p.playBar) * 4);
         alerts.push(off === 0 ? ['good', 'B 进得准'] : ['hot', `B ${off > 0 ? '晚' : '早'}了 ${Math.abs(off)} 拍`]);
       }
-      if (demo) alerts.push(['info', '动旋钮就能接手']);
+      if (demo) alerts.push(['info', '动任意旋钮，换你来']);
       stepIdx = idx; stepN = steps.length;
     }
     const statusKey = JSON.stringify([stepIdx, stepN, alerts]);
@@ -887,7 +917,7 @@
       deckUI[id + 'low'].style.transform = `scaleX(${clamp(Engine.deckLowShare(d)).toFixed(3)})`;
     }
     const ph = Engine.phaseErrorMs(), abs = ph == null ? null : Math.abs(ph);
-    const [cls, txt] = ph == null ? ['idle', '未起播'] : abs < 10 ? ['', '节拍对齐'] : abs < 25 ? ['warn', `差 ${Math.round(abs)} ms`] : ['hot', `错开 ${Math.round(abs)} ms`];
+    const [cls, txt] = ph == null ? ['idle', '未起播'] : abs < 10 ? ['', '鼓点对齐'] : abs < 25 ? ['warn', `鼓点差 ${Math.round(abs)} ms`] : ['hot', `错开 ${Math.round(abs)} ms`];
     if (deckUI.phase._txt !== txt) {
       deckUI.phase._txt = txt;
       deckUI.phase.className = 'phase ' + cls;
@@ -943,12 +973,15 @@
   /* ================= view 4 · review ================= */
   function renderReview() {
     const R = S.result;
-    if (!R) return;
+    if (!R) return go('tracks');
+    if (S.reviewed === R) { requestAnimationFrame(drawCompare); return; }
+    S.reviewed = R;
     const { plan: p, result: r } = R;
-    $('#reviewTitle').textContent = `${p.name} · ${p.en}`;
+    const tries = R.tries || [r.total], best = tries.length > 1 ? Math.max(...tries.slice(0, -1)) : null;
+    $('#reviewTitle').textContent = `${p.name} · 第 ${tries.length} 次`;
     $('#scoreNum').textContent = String(r.total);
     $('#scoreGrade').textContent = r.total >= 85 ? '可以上台了。' : r.total >= 70 ? '很接近了。' : r.total >= 50 ? '方向对了。' : '再来一次。';
-    $('#scoreSub').textContent = S.lastDemoScore != null ? `AI 示范 ${S.lastDemoScore} 分` : '';
+    $('#scoreSub').textContent = [best != null ? (r.total > best ? `新纪录，之前最好 ${best}` : `最好 ${best}`) : '', S.lastDemo && S.lastDemo.plan === p ? `示范 ${S.lastDemo.score}` : ''].filter(Boolean).join(' · ');
     const mx = $('#metrics');
     mx.innerHTML = '';
     Object.keys(Planner.METRIC_LABEL).forEach(k => {
@@ -960,8 +993,8 @@
     $('#nextChip').innerHTML = worst && worst.score < 0.8 ? `${ins(worst.a, true)}<span class="next-note">${worst.note}</span>` : '';
     const cm = $('#comment'), fallback = Coach.fallbackReview(r).split('\n').pop().replace(/^·\s*(下次目标：)?/, '');
     if (Coach.state === 'online') {
-      cm.textContent = 'AI 正在听回放…';
-      Coach.review(S.tracks.A, S.tracks.B, p, r, t => { cm.textContent = t; }).then(t => {
+      cm.textContent = 'Claude 正在写点评…';
+      Coach.review(S.tracks.A, S.tracks.B, p, r, t => { if (S.result === R) cm.textContent = t; }).then(t => {
         if (S.result !== R) return;
         cm.textContent = t ? t.trim() : fallback;
       });
@@ -1012,7 +1045,7 @@
       g.stroke();
     });
     const m = R.meta;
-    if (m.bStartRel != null) { const x = X(m.bStartRel); g.fillStyle = C['deck-b']; g.fillRect(x - 1, top - 4, 2, rows.length * rowH + 4); g.font = `500 10px ${FONT}`; g.fillText(m.bStartBy === 'ai' ? 'B 起播（AI 代按）' : 'B 起播', x + 4, top + rows.length * rowH + 14); }
+    if (m.bStartRel != null) { const x = X(m.bStartRel); g.fillStyle = C['deck-b']; g.fillRect(x - 1, top - 4, 2, rows.length * rowH + 4); g.font = `500 10px ${FONT}`; g.fillText(m.bStartBy === 'ai' ? 'B 起播（帮你按的）' : 'B 起播', x + 4, top + rows.length * rowH + 14); }
   }
 
   /* ================= navigation & boot ================= */
@@ -1045,6 +1078,9 @@
     if (view === 'plans') { renderPlans(); askPanel($('#askPlans')); }
     if (view === 'practice') {
       buildConsole();
+      // whatever happened elsewhere (a finished run, a preview) the desk starts from the plan's opening state
+      if (S.plan && S.mode !== 'free') primeDecks(); else { stopAll(); resetMixer(); }
+      updateStartBtn();
       $('#sessionTitle').textContent = S.plan ? S.plan.name : '练习';
       lastCoachKey = '';
     }
@@ -1061,7 +1097,8 @@
         rel = relNow();
         if (s.mode === 'demo') autopilot(s, rel); else rescue(s, rel);
         if (Engine.now - s.lastRec > 0.03) { s.lastRec = Engine.now; s.rec.push(sampleNow(rel)); }
-        if (rel > s.plan.len + 1.5 || (!Engine.decks.A.playing && rel > 0)) finishSession();
+        if (rel > s.plan.len + 1.5) finishSession();
+        else if (!Engine.decks.A.playing) endSessionEarly();
       }
       updateConsole(); coach(rel); drawLanes();
     } else if (S.view === 'tracks' && S.preview) {
@@ -1074,9 +1111,51 @@
   function updateChip(state) {
     const chip = $('#aiChip');
     chip.dataset.state = state;
-    chip.querySelector('span').textContent = { checking: '连接中', online: 'AI 在线', offline: '离线教练', busy: 'AI 休息中' }[state];
-    chip.title = state === 'online' ? '方案点评、复盘和问答由 Claude 实时生成' : '在 claude.ai 里打开并允许 AI 调用后，Claude 会接管点评和问答；现在由规则引擎教学';
+    chip.querySelector('span').textContent = { checking: '连接中', online: 'Claude 在线', offline: '内置教练', busy: 'Claude 稍后再试' }[state];
+    chip.title = state === 'online' ? '方案点评、复盘和问答由 Claude 实时生成。点开看分工' : '现在由内置教练讲解。在 claude.ai 里打开，Claude 会接管点评和问答。点开看分工';
     if (S.view === 'plans' && state === 'online' && !S.aiPlans) renderPlans();
+  }
+
+  /* ---- the explainer: three steps on the first page, and the same three plus a control glossary in the help sheet ---- */
+  const HOW = [
+    ['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg>', '放两首歌', '拖进卡片，或先用示例曲'],
+    ['<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3.5l1.9 5.6 5.6 1.9-5.6 1.9L11 18.5l-1.9-5.6L3.5 11l5.6-1.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>', 'AI 出三种接法', '看谁更合适，先听一遍'],
+    [() => ICON.knob(0.72), '跟着练，打分复盘', '照着图标拧，练完看哪步没到位'],
+  ];
+  const howItems = () => HOW.map(([ic, b, sm]) => `<li><span class="how-ic">${typeof ic === 'function' ? ic() : ic}</span><span><b>${b}</b><small>${sm}</small></span></li>`).join('');
+  const XF_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="10.75" width="18" height="2.5" rx="1.25" fill="currentColor" opacity=".28"/><rect x="10" y="6.5" width="4" height="11" rx="1.5" fill="currentColor"/></svg>';
+  const GLOSS = [
+    [() => ICON.knob(0.5), 'LOW', '低频：鼓和贝斯的分量。换歌时只留一台的低频。'],
+    [() => ICON.knob(0.5), 'MID', '中频：人声和旋律。'],
+    [() => ICON.knob(0.5), 'HIGH', '高频：镲片和空气感。'],
+    [() => ICON.knob(0.3), 'FILTER', '滤波：往左变闷，往右变薄，用来把一首歌藏起来。'],
+    [() => ICON.knob(0.8), 'ECHO', '回声：让声音拖着尾巴离开。'],
+    [() => ICON.knob(0.5), 'TEMPO', '速度：调快调慢，让两首歌一样快。'],
+    [() => ICON.fader(0.8), '推子', '这一台有多响。'],
+    [() => XF_ICON, '交叉推子', '在 A 和 B 之间分配音量。'],
+    [() => ICON.play, 'PLAY', '开始或暂停这一台。'],
+    [() => ICON.sync, 'SYNC', '一键把速度和拍子对齐另一台。'],
+    [() => 'CUE', 'CUE', '停着时按，记下起点；播放中按，跳回起点。'],
+  ];
+  function openHelp(section) {
+    const dlg = $('#help');
+    if (!$('#gloss').childElementCount) {
+      $('#help .how').innerHTML = howItems();
+      $('#gloss').innerHTML = GLOSS.map(([ic, b, sm]) => `<div class="g-item"><span class="g-ic">${ic()}</span><span><b>${b}</b><small>${sm}</small></span></div>`).join('');
+    }
+    if (S.preview) stopPreview();
+    dlg.showModal();
+    if (section === 'about') $('#help .about').scrollIntoView({ block: 'nearest' });
+  }
+
+  /* ---- practice history, kept in this browser only ---- */
+  const HIST_KEY = 'segue.history.v1';
+  function loadHist() { try { return JSON.parse(localStorage.getItem(HIST_KEY)) || []; } catch (e) { return []; } }
+  function recordTry(planId, score) {
+    const all = loadHist();
+    all.push({ p: planId, s: score, t: Date.now() });
+    try { localStorage.setItem(HIST_KEY, JSON.stringify(all.slice(-60))); } catch (e) { /* private mode: history just isn't kept */ }
+    return all.filter(x => x.p === planId).map(x => x.s);
   }
 
   function boot() {
@@ -1098,13 +1177,31 @@
     $('#againBtn').addEventListener('click', () => { const id = S.result.plan.id; selectPlan(id, 'guide'); });
     $('#watchBtn').addEventListener('click', () => { const id = S.result.plan.id; selectPlan(id, 'demo'); });
     $('#otherBtn').addEventListener('click', () => go('plans'));
+    $('#how').innerHTML = howItems();
+    $('#aiChip').addEventListener('click', () => openHelp('about'));
+    $('#heroHow').addEventListener('click', () => openHelp());
+    $('#brandHome').addEventListener('click', e => { e.preventDefault(); go('tracks'); });
+    $('#heroDemo').addEventListener('click', () => { if (S.planset) selectPlan(S.aiPlans ? S.aiPlans.pick : S.planset.pickId, 'demo'); });
+    $('#newSongsBtn').addEventListener('click', () => go('tracks'));
+    try { if (localStorage.getItem('segue.hint.mobile')) $('#mobileHint').hidden = true; } catch (e) { /* ignore */ }
+    $('#mobileHintX').addEventListener('click', () => { $('#mobileHint').hidden = true; try { localStorage.setItem('segue.hint.mobile', '1'); } catch (e) { /* ignore */ } });
+    $('#helpBtn').addEventListener('click', openHelp);
+    $('#footHelp').addEventListener('click', openHelp);
+    $('#helpClose').addEventListener('click', () => $('#help').close());
+    // a click on the dimmed backdrop lands on the dialog element itself
+    $('#help').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
     document.addEventListener('keydown', e => {
-      if (S.view !== 'practice' || e.target.closest('input, textarea, [role="slider"]')) return;
+      if (S.view !== 'practice' || $('#help').open || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.target.closest('input, textarea, [role="slider"]')) return;
+      // a button the keyboard landed on keeps its own Space; one that was just clicked does not
+      if (e.target.closest('button, a') && e.target.matches(':focus-visible')) return;
       if (e.code === 'Space') { e.preventDefault(); playPressed('B'); }
       else if (e.key === 's' || e.key === 'S') syncPressed('B');
     });
-    let rz;
+    let rz, lastW = innerWidth;
     window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => {
+      if (innerWidth === lastW) return;
+      lastW = innerWidth;
       if (S.view === 'tracks') { trackCard('A'); trackCard('B'); }
       if (S.view === 'plans') renderPlans();
       if (S.view === 'review') drawCompare();
@@ -1112,7 +1209,6 @@
     // canvases and inline SVG read colours once; repaint when the viewer's theme flips
     const onTheme = () => {
       readColors();
-      $$('canvas').forEach(c => { c._cache = null; });
       if (S.view === 'tracks') { trackCard('A'); trackCard('B'); renderCompat(); }
       if (S.view === 'plans') renderPlans();
       if (S.view === 'review') drawCompare();

@@ -1,4 +1,4 @@
-<title>Segue AI 混音教练</title>
+<title>Segue · AI 混音教练</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -71,12 +71,16 @@ button { cursor: pointer; border: 0; background: none; padding: 0; -webkit-tap-h
 header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in oklab, var(--ink) 72%, transparent); -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%); }
 @media (prefers-reduced-transparency: reduce) { header.top { background: var(--ink); -webkit-backdrop-filter: none; backdrop-filter: none; } }
 header.top .bar-in { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; padding: 8px 24px; min-height: 60px; max-width: 1400px; margin: 0 auto; }
-.brand { font-family: var(--display); font-weight: 600; font-size: 21px; letter-spacing: -0.02em; }
+.brand { justify-self: start; display: inline-flex; align-items: center; gap: 8px; font-family: var(--display); font-weight: 600; font-size: 21px; letter-spacing: -0.02em; color: inherit; text-decoration: none; }
+.brand .mark { position: relative; width: 30px; height: 18px; }
+.brand .mark i { position: absolute; top: 0; width: 18px; height: 18px; border-radius: 50%; }
+.brand .mark i:first-child { left: 0; background: var(--text); }
+.brand .mark i:last-child { right: 0; box-shadow: inset 0 0 0 2px var(--text); }
 nav.steps { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--booth); }
 nav.steps button { display: flex; align-items: center; height: 38px; padding: 0 16px; border-radius: 999px; color: var(--dim); white-space: nowrap; font-size: 14px; font-weight: 500; }
 nav.steps button.on { background: var(--text); color: var(--ink); }
 nav.steps button:disabled { cursor: default; opacity: 0.45; }
-.ai-chip { justify-self: end; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--dim); white-space: nowrap; }
+.ai-chip { justify-self: end; display: flex; height: 36px; padding: 0 4px; border-radius: 999px; align-items: center; gap: 6px; font-size: 12px; color: var(--dim); white-space: nowrap; }
 .ai-chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); }
 .ai-chip[data-state="online"] i { background: var(--coach); }
 .ai-chip[data-state="busy"] i { background: var(--warn); }
@@ -134,17 +138,23 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 21px; margin: 0; 
 .track-err { color: var(--hot); font-size: 13px; }
 .strip { position: relative; display: flex; gap: 3px; height: 64px; touch-action: pan-y; cursor: pointer; }
 .sec { min-width: 0; overflow: hidden; border-radius: 12px; font-size: 12px; font-weight: 500; white-space: nowrap; transition: filter var(--dur-ui) ease; }
+/* a capsule too narrow for its name keeps only its colour; the name stays in the tooltip */
+.sec { container-type: inline-size; }
+@container (max-width: 40px) { .sec span { visibility: hidden; } }
 .sec.s1 { background: var(--sec1); color: var(--st1); }
 .sec.s2 { background: var(--sec2); color: var(--st2); }
 .sec.s3 { background: var(--sec3); color: var(--st3); }
 .sec.s4 { background: var(--sec4); color: var(--st4); }
 .playhead { position: absolute; top: -6px; bottom: -6px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--coach); pointer-events: none; }
 .track-foot { display: flex; align-items: center; gap: 12px; min-height: 44px; }
-.play-btn { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--text); color: var(--ink); }
+.play-btn { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--text); color: var(--ink); transition: transform var(--dur-press) var(--ease-out); }
+.play-btn:active, .file-btn:active, .sec:active, .ai-chip:active { transform: scale(0.97); }
+.plan:active { transform: scale(0.99); }
 .track-time { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .track-time small { font-size: 14px; font-weight: 400; color: var(--dim); }
-.grid-fix { margin-left: auto; display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--dim); }
-.grid-fix button { width: 32px; height: 32px; border-radius: 50%; background: var(--booth); color: var(--text); font-size: 11px; }
+.grid-fix { margin-left: auto; display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--dim); transition: opacity var(--dur-ui) ease; }
+@media (hover: hover) and (pointer: fine) { .grid-fix { opacity: 0; } .track:hover .grid-fix, .grid-fix:focus-within { opacity: 1; } }
+.grid-fix button { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--booth); color: var(--text); }
 .loading { flex: 1; display: grid; place-items: center; min-height: 128px; }
 .loading .bars { display: flex; gap: 4px; height: 28px; align-items: flex-end; }
 .loading .bars i { width: 5px; background: var(--text); border-radius: 2px; animation: eq 0.9s ease-in-out infinite; }
@@ -153,7 +163,7 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 21px; margin: 0; 
 .file-btn { position: relative; overflow: hidden; cursor: pointer; }
 .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
 .swap-btn { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--text); color: var(--ink); transition: transform var(--dur-press) var(--ease-out), opacity var(--dur-ui) ease; }
-.swap-btn:active:not(:disabled) { transform: scale(0.94); }
+.swap-btn:active:not(:disabled) { transform: scale(0.97); }
 .swap-btn:disabled { opacity: 0.3; cursor: default; }
 .swap-btn span { display: grid; transition: transform 400ms var(--ease-in-out); }
 @media (hover: hover) and (pointer: fine) { .swap-btn:hover:not(:disabled) span { transform: rotate(180deg); } }
@@ -174,7 +184,7 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 21px; margin: 0; 
 
 /* ---------- view 2: plans ---------- */
 .plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.plan { display: flex; flex-direction: column; gap: 20px; padding: 24px; border-radius: 28px; text-align: left; background: var(--card); box-shadow: inset 0 0 0 1px var(--rail); min-width: 0; }
+.plan { display: flex; flex-direction: column; gap: 20px; padding: 24px; border-radius: 24px; text-align: left; background: var(--card); box-shadow: none; min-width: 0; }
 .plan.on { box-shadow: inset 0 0 0 2px var(--text); }
 .art { position: relative; display: block; height: 112px; border-radius: 16px; background: var(--booth); overflow: hidden; }
 .art .lane { position: absolute; left: 12px; right: 12px; height: 34px; }
@@ -186,7 +196,7 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 21px; margin: 0; 
 .plan-name { font-family: var(--display); font-size: 30px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; display: block; }
 .plan-line { display: block; margin-top: 4px; font-size: 14px; color: var(--dim); }
 .fit { flex: none; text-align: right; }
-.fit b { display: block; font-family: var(--display); font-size: 30px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.fit b { display: block; font-family: var(--display); font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
 .fit small { display: block; margin-top: 4px; font-size: 12px; color: var(--dim); }
 .fit small.pick { color: var(--coach-text); font-weight: 500; }
 .plan-meta { display: flex; align-items: center; gap: 16px; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -194,13 +204,14 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 21px; margin: 0; 
 .dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--rail); }
 .dots i.on { background: var(--text); }
 .script { display: flex; flex-wrap: wrap; gap: 6px; }
-.plan-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 12px; padding: 12px 12px 12px 24px; border-radius: 28px; background: var(--booth); }
+.plan-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 12px 12px 24px; border-radius: 24px; background: var(--card); }
+.plan-bar .btn:not(.primary) { background: var(--booth); }
 .plan-bar .txt { flex: 1 1 280px; min-width: 0; }
 .plan-bar b { display: block; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
 .plan-bar span { display: block; font-size: 14px; color: var(--dim); }
 .plan-bar .acts { display: flex; flex-wrap: wrap; gap: 8px; margin-left: auto; }
 
-.ask { margin-top: 12px; background: var(--booth); border-radius: 28px; padding: 20px 24px; display: grid; gap: 12px; }
+.ask { margin-top: 12px; background: var(--booth); border-radius: 24px; padding: 20px 24px; display: grid; gap: 12px; }
 .ask-chips { display: flex; gap: 8px; flex-wrap: wrap; }
 .ask-chips button { background: var(--card); border-radius: 999px; min-height: 36px; padding: 4px 14px; font-size: 13px; }
 .ask form { display: flex; gap: 8px; }
@@ -214,16 +225,17 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 21px; margin: 0; 
 /* ---------- view 3: practice ---------- */
 .session-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; padding: 8px 0; }
 .session-bar h2 { font-size: 17px; }
-.session-bar .btn { justify-self: end; background: none; color: var(--dim); }
+.session-bar .btn { justify-self: end; gap: 4px; background: none; color: var(--dim); }
 .seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--booth); }
 .seg button { height: 38px; padding: 0 14px; border-radius: 999px; color: var(--dim); font-size: 13px; font-weight: 500; white-space: nowrap; }
-.seg button.on { background: var(--booth-2); color: var(--text); }
+.seg button.on { background: var(--text); color: var(--ink); }
 .island-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 8px 0 20px; }
 .island { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 16px; min-height: 76px; max-width: 100%; padding: 12px 12px 12px 12px; border-radius: 38px; background: var(--booth); transition: box-shadow var(--dur-panel) var(--ease-out); }
 .island.now { box-shadow: 0 0 0 2px var(--coach); }
 .count { position: relative; flex: none; width: 52px; height: 52px; display: grid; place-items: center; }
 .count svg { position: absolute; inset: 0; }
-.count b { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.count b { position: relative; display: grid; justify-items: center; font-size: 15px; line-height: 1.05; font-weight: 600; font-variant-numeric: tabular-nums; }
+.count b small { font-size: 9px; font-weight: 500; color: var(--dim); }
 .coach-text { min-width: 0; transition: opacity var(--dur-ui) var(--ease-out), filter var(--dur-ui) var(--ease-out); }
 .coach-text.fade { opacity: 0; filter: blur(2px); }
 .what { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 20px; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
@@ -305,11 +317,11 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 21px; margin: 0; 
 
 /* ---------- view 4: review ---------- */
 .bento { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 16px; }
-.tile { box-sizing: border-box; border-radius: 28px; background: var(--booth); padding: 24px 28px; min-width: 0; }
+.tile { box-sizing: border-box; border-radius: 24px; background: var(--booth); padding: 24px 28px; min-width: 0; }
 .tile.narrow { flex: 1 1 340px; }
 .tile.wide { flex: 999 1 480px; }
 .tile.full { flex: 1 1 100%; }
-.score-tile { min-height: 340px; background: #000000; color: #f5f5f7; padding: 32px; display: flex; flex-direction: column; justify-content: space-between; gap: 24px; }
+.score-tile { min-height: 340px; background: #000000; color: #f5f5f7; box-shadow: inset 0 0 0 1px var(--hairline); padding: 32px; display: flex; flex-direction: column; justify-content: space-between; gap: 24px; }
 .score-tile .eyebrow { color: #98989d; }
 .score-num { font-family: var(--display); font-size: clamp(96px, 11vw, 136px); line-height: .95; font-weight: 600; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
 .score-grade { margin-top: 12px; font-family: var(--display); font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
@@ -317,8 +329,8 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 21px; margin: 0; 
 .metrics { display: flex; flex-direction: column; justify-content: center; gap: 18px; }
 .metric { display: flex; align-items: center; gap: 16px; }
 .metric > span { flex: none; width: 64px; font-size: 15px; font-weight: 600; white-space: nowrap; }
-.metric u { position: relative; flex: 1; min-width: 0; height: 28px; border-radius: 10px; background: var(--booth-2); overflow: hidden; text-decoration: none; }
-.metric u i { position: absolute; inset: 0; border-radius: 10px; background: var(--text); transform-origin: left; transform: scaleX(var(--v)); transition: transform 700ms var(--ease-out); }
+.metric u { position: relative; flex: 1; min-width: 0; height: 28px; border-radius: 14px; background: var(--booth-2); overflow: hidden; text-decoration: none; }
+.metric u i { position: absolute; inset: 0; border-radius: 14px; background: var(--text); transform-origin: left; transform: scaleX(var(--v)); transition: transform 700ms var(--ease-out); }
 .metric.pre u i { transform: scaleX(0); transition: none; }
 .metric b { flex: none; width: 36px; text-align: right; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 .steps-list { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
@@ -346,6 +358,55 @@ h2 { font-family: var(--display); font-weight: 600; font-size: 21px; margin: 0; 
 .toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; transition-duration: 320ms; }
 
 html, body { overflow-x: clip; }
+.hero-acts { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.btn.link { background: none; color: var(--coach-text); padding: 0 12px; }
+@media (hover: hover) and (pointer: fine) { .btn.link:hover:not(:disabled) { background: none; text-decoration: underline; } }
+.track-err { display: grid; justify-items: center; gap: 12px; text-align: center; }
+.mobile-hint { display: none; }
+
+/* ---------- header right, help sheet, how-it-works, footer ---------- */
+.top-r { justify-self: end; display: flex; align-items: center; gap: 12px; }
+.icon-btn.hd { width: 36px; height: 36px; }
+.hero { text-align: center; padding: 48px 0 36px; }
+.hero .eyebrow { margin: 0 0 10px; font-weight: 600; }
+.hero h1 { padding: 0; }
+.hero h1, .hero .lede { word-break: keep-all; text-wrap: balance; }
+.hero .lede { margin: 16px auto 0; font-size: clamp(17px, 1.6vw, 21px); line-height: 1.4; max-width: 30em; }
+.how { list-style: none; margin: 40px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.how li { display: flex; align-items: center; gap: 16px; padding: 20px 24px; border-radius: 24px; background: var(--booth); }
+.how .how-ic { flex: none; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--card); color: var(--text); }
+.how .how-ic svg { width: 22px; height: 22px; display: block; }
+.how b { display: block; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.how small { display: block; margin-top: 2px; font-size: 13px; color: var(--dim); }
+.how.in-sheet { margin: 4px 0 0; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.how.in-sheet li { padding: 14px 16px; border-radius: 18px; }
+.site-foot { display: flex; justify-content: center; align-items: center; gap: 16px; padding: 8px 16px calc(32px + env(safe-area-inset-bottom, 0px)); font-size: 12px; color: var(--dim); }
+.site-foot button { color: var(--coach-text); font-size: 12px; }
+.sheet { border: 0; padding: 0; border-radius: 28px; background: var(--card); color: var(--text); width: min(720px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); box-shadow: 0 30px 90px rgba(0, 0, 0, 0.28); overflow: hidden; }
+.sheet::backdrop { background: rgba(0, 0, 0, 0.32); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.sheet[open] { animation: sheet-in var(--dur-panel) var(--ease-out); }
+.sheet[open]::backdrop { animation: fade-in var(--dur-panel) var(--ease-out); }
+@keyframes sheet-in { from { opacity: 0; transform: translateY(12px) scale(0.98); } }
+@keyframes fade-in { from { opacity: 0; } }
+.sheet-in { max-height: calc(100dvh - 48px); overflow: auto; padding: 24px 28px 32px; overscroll-behavior: contain; }
+.sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.sheet-head h2 { font-size: 28px; }
+.sheet h3 { margin: 28px 0 12px; font-size: 13px; font-weight: 600; color: var(--dim); letter-spacing: .02em; }
+.gloss { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.g-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 18px; background: var(--booth); }
+.g-ic { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--card); color: var(--text); font-size: 10px; font-weight: 700; }
+.g-ic svg { width: 22px; height: 22px; display: block; }
+.g-item b { display: block; font-size: 14px; font-weight: 600; }
+.g-item small { display: block; font-size: 12px; line-height: 1.45; color: var(--dim); }
+.keys { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; }
+.keys span { display: inline-flex; align-items: center; gap: 6px; }
+kbd { display: inline-grid; place-items: center; min-width: 28px; height: 26px; padding: 0 7px; border-radius: 7px; background: var(--booth); box-shadow: inset 0 -1px 0 var(--rail); font: 600 12px var(--body); }
+.about { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.about li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 18px; background: var(--booth); }
+.about b { display: block; font-size: 14px; font-weight: 600; }
+.about small { display: block; font-size: 12px; line-height: 1.5; color: var(--dim); }
+.about-note { margin: 12px 0 0; font-size: 12px; color: var(--faint); text-align: center; }
+
 @media (max-width: 1100px) {
   .plans { grid-template-columns: minmax(0, 1fr); }
   .knobs { display: grid; grid-template-columns: repeat(3, 1fr); justify-items: center; }
@@ -356,6 +417,10 @@ html, body { overflow-x: clip; }
   .deck-info .meta { flex-basis: calc(100% - 46px); }
 }
 @media (max-width: 760px) {
+  /* on a phone the three plans are a long scroll; the chosen one and its buttons ride along at the bottom */
+  .plan-bar { position: sticky; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 5; box-shadow: 0 0 0 1px var(--hairline), 0 12px 32px rgba(0,0,0,.18); padding: 12px; }
+  .plan-bar .txt { flex-basis: 100%; padding: 0 8px; }
+  .plan-bar .btn { flex: 1 1 0; }
   header.top .bar-in { grid-template-columns: 1fr auto; padding-inline: 16px; }
   nav.steps { grid-column: 1 / 3; grid-row: 2; justify-self: center; }
   nav.steps button { padding: 0 12px; }
@@ -367,6 +432,14 @@ html, body { overflow-x: clip; }
   .next-row { padding: 16px; }
   .next-row .btn.primary { width: 100%; margin-left: 0; }
   .plan-bar { padding: 16px; }
+  .how { grid-template-columns: minmax(0, 1fr); margin-top: 24px; }
+  .hero { padding: 28px 0 24px; }
+  .top-r .ai-chip span { display: none; }
+  header.top { position: relative; }
+  nav.steps button { height: 34px; }
+  .mobile-hint { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 4px 0 0; font-size: 13px; color: var(--dim); }
+  .mobile-hint[hidden] { display: none; }
+  .mobile-hint button { color: var(--coach-text); font-size: 13px; }
   .plan-bar .acts, .plan-bar .acts .btn { width: 100%; }
   .session-bar { grid-template-columns: 1fr auto; }
   .session-bar .seg { grid-column: 1 / 3; grid-row: 2; justify-self: center; }
@@ -388,21 +461,58 @@ html, body { overflow-x: clip; }
 
 <header class="top">
   <div class="bar-in">
-    <div class="brand">Segue</div>
+    <a class="brand" href="#" id="brandHome" aria-label="Segue 首页"><span class="mark" aria-hidden="true"><i></i><i></i></span>Segue</a>
     <nav class="steps" aria-label="流程">
       <button data-go="tracks" class="on">选歌</button>
       <button data-go="plans" disabled>方案</button>
       <button data-go="practice" disabled>练习</button>
       <button data-go="review" disabled>复盘</button>
     </nav>
-    <div class="ai-chip" id="aiChip" data-state="checking"><i></i><span>连接中</span></div>
+    <div class="top-r">
+      <button class="ai-chip" id="aiChip" data-state="checking"><i></i><span>连接中</span></button>
+      <button class="icon-btn hd" id="helpBtn" aria-label="怎么玩" title="怎么玩"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.2 9.2a2.9 2.9 0 0 1 5.6 1c0 2-2.8 2.4-2.8 4.3"/><circle cx="12" cy="18.3" r=".6" fill="currentColor"/></svg></button>
+    </div>
   </div>
 </header>
+
+<dialog class="sheet" id="help" aria-labelledby="helpTitle">
+  <div class="sheet-in">
+    <div class="sheet-head">
+      <h2 id="helpTitle">怎么玩</h2>
+      <button class="icon-btn" id="helpClose" aria-label="关闭"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <ol class="how in-sheet" aria-label="三步"></ol>
+    <h3>控件</h3>
+    <div class="gloss" id="gloss"></div>
+    <h3>快捷键</h3>
+    <div class="keys">
+      <span><kbd>空格</kbd>B 播放 / 暂停</span>
+      <span><kbd>S</kbd>B 同步到 A</span>
+      <span><kbd>↑</kbd><kbd>↓</kbd>微调选中的旋钮</span>
+      <span><kbd>Esc</kbd>关闭这页</span>
+    </div>
+    <h3>关于</h3>
+    <ul class="about">
+      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 18V6M9 18v-8M14 18V9M19 18v-5"/></svg></span><span><b>规则引擎</b><small>测速度、找乐句、排方案、打分。每次结果都一样，离线也能用。</small></span></li>
+      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3.5l1.9 5.6 5.6 1.9-5.6 1.9L11 18.5l-1.9-5.6L3.5 11l5.6-1.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></span><span><b>Claude</b><small>在 claude.ai 里打开时，点评方案、写复盘、回答问题。不在线时由内置教练接手。</small></span></li>
+      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span><span><b>只在本机</b><small>歌曲在你的浏览器里解码和分析，不上传。</small></span></li>
+    </ul>
+    <p class="about-note">Segue 是一个 AI 产品作品集 Demo。</p>
+  </div>
+</dialog>
 
 <main class="wrap">
   <!-- 1 · tracks -->
   <section class="view" id="view-tracks">
-    <h1>接好下一首。</h1>
+    <div class="hero">
+      <p class="eyebrow">AI 混音教练</p>
+      <h1 id="slogan">两首歌，无缝接上。</h1>
+      <p class="lede" id="heroLede">放进两首歌，AI 给出三种接法，再一步一步带你练会。</p>
+      <div class="hero-acts">
+        <button class="btn primary" id="heroDemo" disabled><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5.8v12.4l9.6-6.2z"/></svg>先听一遍示范</button>
+        <button class="btn link" id="heroHow">怎么玩</button>
+      </div>
+    </div>
     <div class="tray">
       <div class="track-grid">
         <article class="track" data-deck="A" id="trackA"></article>
@@ -411,26 +521,29 @@ html, body { overflow-x: clip; }
       </div>
       <div class="next-row">
         <aside class="compat" id="compat" aria-label="两首歌的匹配度"></aside>
-        <button class="btn primary" id="toPlans" disabled>生成方案</button>
+        <button class="btn primary" id="toPlans" disabled>看看怎么接</button>
       </div>
     </div>
     <p class="footnote">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-      仅在本机分析 · 示例曲由网页实时合成
+      MP3 · WAV · M4A　歌只在你的浏览器里分析，不会上传
     </p>
+    <ol class="how" id="how" aria-label="三步"></ol>
   </section>
 
   <!-- 2 · plans -->
   <section class="view" id="view-plans" hidden>
     <h1>选一种接法。</h1>
     <p class="lede" id="verdict"></p>
+    <div class="tray">
     <div class="plans" id="plans"></div>
     <div class="plan-bar">
       <div class="txt"><b id="barName"></b><span id="barWhy"></span></div>
       <div class="acts">
-        <button class="btn" id="demoBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5.8v12.4l9.6-6.2z"/></svg>听 AI 版</button>
+        <button class="btn" id="demoBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5.8v12.4l9.6-6.2z"/></svg>先听示范</button>
         <button class="btn primary" id="practiceBtn">开始练习</button>
       </div>
+    </div>
     </div>
     <div class="ask" id="askPlans"></div>
   </section>
@@ -440,17 +553,18 @@ html, body { overflow-x: clip; }
     <div class="session-bar">
       <h2 id="sessionTitle">练习</h2>
       <div class="seg" role="tablist" aria-label="模式">
-        <button data-mode="demo" role="tab">AI 示范</button>
+        <button data-mode="demo" role="tab">示范</button>
         <button data-mode="guide" role="tab" class="on">跟练</button>
         <button data-mode="free" role="tab">自由</button>
       </div>
-      <button class="btn sm" id="backPlans">换方案</button>
+      <button class="btn sm" id="backPlans"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>换方案</button>
     </div>
+    <p class="mobile-hint" id="mobileHint">练习台在电脑或横屏的平板上更好用<button aria-label="知道了" id="mobileHintX">知道了</button></p>
     <div class="island-wrap">
       <div class="island" id="coachCard" role="status">
         <div class="count" id="count"></div>
-        <div class="coach-text" id="coachText"><div class="what" id="coachWhat">先把台子摆好</div></div>
-        <button class="btn sm primary" id="startBtn">▶ 开始</button>
+        <div class="coach-text" id="coachText"><div class="what" id="coachWhat">按提示摆好台子</div></div>
+        <button class="btn sm primary" id="startBtn">开始</button>
       </div>
       <div class="island-sub">
         <span id="coachWhen">准备</span>
@@ -479,24 +593,30 @@ html, body { overflow-x: clip; }
       <section class="tile wide metrics" id="metrics" aria-label="五项评分"></section>
       <section class="tile wide"><h2>每一步</h2><div class="steps-list" id="stepsList"></div></section>
       <section class="tile narrow next-tile">
-        <h2>下次</h2>
+        <h2>下次试试</h2>
         <div class="next-chip" id="nextChip"></div>
         <p class="comment" id="comment"></p>
         <div class="next-acts">
           <button class="btn primary" id="againBtn">再练一次</button>
           <button class="btn" id="watchBtn">看示范</button>
+          <button class="btn" id="newSongsBtn">换两首歌</button>
           <button class="btn" id="otherBtn">换方案</button>
         </div>
       </section>
       <section class="tile full compare">
-        <h2>你 vs AI</h2>
-        <div class="legend"><span><i style="border-color:var(--coach);border-top-style:dashed"></i>AI</span><span><i style="border-color:var(--deck-a)"></i>A</span><span><i style="border-color:var(--deck-b)"></i>B</span><span><i style="border-color:var(--hot);border-top-width:6px;opacity:.5"></i>低频打架</span></div>
+        <h2>你 vs 示范</h2>
+        <div class="legend"><span><i style="border-color:var(--coach);border-top-style:dashed"></i>示范</span><span><i style="border-color:var(--deck-a)"></i>A</span><span><i style="border-color:var(--deck-b)"></i>B</span><span><i style="border-color:var(--hot);border-top-width:6px;opacity:.5"></i>低频打架</span></div>
         <canvas id="compareCanvas"></canvas>
       </section>
     </div>
     <div class="ask" id="askReview"></div>
   </section>
 </main>
+
+<footer class="site-foot">
+  <span>Segue · 一个 AI 产品作品集 Demo</span>
+  <button id="footHelp">怎么玩</button>
+</footer>
 
 <script src="js/synth.js"></script>
 <script src="js/analysis.js"></script>

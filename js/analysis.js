@@ -299,9 +299,9 @@ const Analysis = (() => {
     if (ka.num === kb.num && ka.letter === kb.letter) { rel = '同调'; score = 1; }
     else if (ka.num === kb.num) { rel = '关系大小调'; score = 0.9; }
     else if (ka.letter === kb.letter && (diff === 1 || diff === 11)) { rel = '相邻调'; score = 0.88; }
-    else if (ka.letter === kb.letter && (diff === 2 || diff === 10)) { rel = '能量跳调'; score = 0.65; }
-    else if (ka.letter !== kb.letter && (diff === 1 || diff === 11)) { rel = '对角混音'; score = 0.6; }
-    else { rel = '调性冲突'; score = 0.35; }
+    else if (ka.letter === kb.letter && (diff === 2 || diff === 10)) { rel = '升能量'; score = 0.65; }
+    else if (ka.letter !== kb.letter && (diff === 1 || diff === 11)) { rel = '能接，换个情绪'; score = 0.6; }
+    else { rel = '调性不太搭'; score = 0.35; }
     const bpmPct = (a.bpm / b.bpm - 1) * 100; // how much B has to change to meet A
     const semis = 12 * Math.log2(a.bpm / b.bpm);
     const abs = Math.abs(bpmPct);

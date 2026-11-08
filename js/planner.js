@@ -140,9 +140,9 @@ const Planner = (() => {
     const stepResults = p.steps.map(step => {
       const parts = step.actions.map(a => {
         if (a.ctrl === 'play') {
-          if (meta.bStartRel == null) return { a, score: 0, note: '没有起播 B' };
+          if (meta.bStartRel == null) return { a, score: 0, note: 'B 没放出来' };
           const off = Math.round((meta.bStartRel - a.bar) * 4);
-          const by = meta.bStartBy === 'ai' ? '（AI 代按）' : '';
+          const by = meta.bStartBy === 'ai' ? '（帮你按的）' : '';
           return { a, score: off === 0 ? (meta.bStartBy === 'ai' ? 0.5 : 1) : clamp(1 - Math.abs(off) / 4) * 0.7, note: (off === 0 ? '卡在乐句第一拍' : `${off > 0 ? '晚' : '早'}了 ${Math.abs(off)} 拍`) + by, off };
         }
         const val = s => s[a.deck][a.ctrl];
@@ -152,13 +152,14 @@ const Planner = (() => {
           const tail = within(a.bar + a.dur, a.bar + a.dur + 1.5);
           const miss = tail.length ? Math.min(...tail.map(s => Math.abs(val(s) - a.to))) : 1;
           const score = 0.55 * clamp(1 - err / 0.3) + 0.45 * (miss < 0.12 ? 1 : clamp(1 - (miss - 0.12) / 0.3));
-          return { a, score, note: miss >= 0.12 ? '没到目标位置' : err > 0.15 ? '节奏不够均匀' : '跟得很稳' };
+          return { a, score, note: miss >= 0.12 ? '没到目标位置' : err > 0.15 ? '推得不够匀' : '跟得很稳' };
         }
         const win = within(a.bar - 2, a.bar + 3), near = s => Math.abs(val(s) - a.to) < 0.12;
         const hitS = win.find((s, i) => i > 0 && near(s) && !near(win[i - 1]));
         if (!hitS) {
-          if (win.length && win.every(near)) return { a, score: 0.7, note: '提前就位了' };
-          return { a, score: 0, note: '没做到' };
+          // early is fine, but only if the viewer actually moved it there: a control that never left the target earns nothing
+          if (win.length && win.every(near) && rec.some(s => s.rel < a.bar - 2 && !near(s))) return { a, score: 0.7, note: '提前就位了' };
+          return { a, score: 0, note: '漏了这步' };
         }
         const dt = (hitS.rel - a.bar) * 4;
         return { a, score: clamp(1 - Math.max(0, Math.abs(dt) - 0.5) / 3), note: Math.abs(dt) <= 0.75 ? '时机准' : `${dt > 0 ? '晚' : '早'}了 ${Math.abs(dt).toFixed(1)} 拍`, dt };
@@ -188,7 +189,7 @@ const Planner = (() => {
     return { metrics, total, stepResults, handover, aiStarted: meta.bStartBy === 'ai', clashBeats: clashBars * 4, worstPhase: overlap.length ? Math.max(...overlap.map(s => Math.abs(s.phase))) : 0 };
   }
 
-  const METRIC_LABEL = { beat: '节拍对齐', phrase: '乐句时机', bass: '低频控制', level: '音量平稳', steps: '动作完成' };
+  const METRIC_LABEL = { beat: '节拍对齐', phrase: '乐句时机', bass: '低频干净', level: '音量平稳', steps: '动作到位' };
 
   return { make, stateAt, evaluate, CTRL_NAME, DEFAULTS, METRIC_LABEL };
 })();
@@ -249,7 +250,7 @@ const Coach = (() => {
     const m = result.metrics, steps = result.stepResults.map(r => ({ at: r.step.bar, did: r.step.actions.map(a => a.label).join(' + '), score: Math.round(r.score * 100), notes: r.parts.map(p => p.note) }));
     const prompt = `${PERSONA}
 新手刚刚练完一次「${plan.name} ${plan.en}」过渡。下面是系统测到的结果（0-100）。
-请写三句话复盘：第一句具体表扬做得最好的一点；第二句指出最该改的一个问题，并说明听众会听到什么；第三句给出下一次练习时一个具体可执行的小目标。每句不超过 45 个字，用"·"开头，各占一行，不要别的内容。
+用一句话点评，不超过 32 个字：先说听众会听到的最大问题，再给下一次一个具体动作。如果做得很好，就具体夸一处。只输出这一句，不要引号、编号或换行。
 数据：${JSON.stringify({ ...summary(A, B, plan), total: result.total, handedOverToB: result.handover, metrics: Object.fromEntries(Object.entries(m).map(([k, v]) => [Planner.METRIC_LABEL[k], Math.round(v * 100)])), lowClashBeats: +result.clashBeats.toFixed(1), worstBeatOffsetMs: Math.round(result.worstPhase), steps })}`;
     try { return (await sample(prompt, { modelTier: 'quick', onText: onText ? ({ text }) => onText(text) : undefined })).text; }
     catch (e) { fail(e); return null; }
@@ -297,9 +298,9 @@ const Coach = (() => {
       bass: `有大约 ${result.clashBeats.toFixed(1)} 拍两首歌的低频同时开着，底鼓会叠成两层、发闷。`,
       level: '中间有一段音量掉下去或冲太高，舞池会明显感觉到。', steps: '有几个动作没做到目标位置，过渡听起来会不完整。',
     }[worst];
-    const next = !result.handover ? '下次目标：先看一遍 AI 示范，记住 B 的推子什么时候推满。' : {
-      beat: '下次目标：起播前确认 B 的 BPM 和 A 一致。', phrase: '下次目标：盯着倒计时，在"1"的那一拍按 PLAY。',
-      bass: '下次目标：交换低频时两只手同时动，一拍内完成。', level: '下次目标：推 B 的时候，耳朵盯着总音量表。', steps: '下次目标：先用 AI 示范看一遍，再跟着练。',
+    const next = !result.handover ? '下次目标：先看一遍示范，记住 B 的推子什么时候推满。' : {
+      beat: '下次目标：起播前确认 B 的 BPM 和 A 一致。', phrase: '下次目标：看到“现在”就按 PLAY。',
+      bass: '下次目标：交换低频时两只手同时动，一拍内完成。', level: '下次目标：推 B 的时候，耳朵盯着总音量表。', steps: '下次目标：先看一遍示范，再跟着练。',
     }[worst];
     return `· ${praise}\n· ${fix}\n· ${next}`;
   }
