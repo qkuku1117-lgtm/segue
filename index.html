@@ -542,6 +542,171 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
   .pill, .plan, .plan.pre { transition: none !important; translate: none !important; }
   .plan.on .art::after, .strip.sk i, .track-foot.sk i, .track > * { animation: none !important; }
 }
+
+/* ---------- Segue 2: pair + crate, one score, mixer faders, one thing to fix ---------- */
+.wrap { max-width: 1344px; padding-left: max(32px, env(safe-area-inset-left, 0px)); padding-right: max(32px, env(safe-area-inset-right, 0px)); }
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px 40px; padding: 28px 0 32px; }
+.page-head h1 { padding: 0; text-align: left; font-size: clamp(40px, 4.6vw, 64px); line-height: 1.06; word-break: keep-all; }
+.page-head .eyebrow { margin: 0 0 8px; font-weight: 600; }
+.page-head .lede { margin: 0 0 6px; max-width: 22em; text-align: left; font-size: 17px; line-height: 1.45; word-break: keep-all; }
+.page-head .lede span { display: block; }
+.linkbtn { color: var(--coach-text); font-size: inherit; }
+@media (hover: hover) and (pointer: fine) { .linkbtn:hover { text-decoration: underline; } }
+
+.cols { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 24px; }
+.pair { flex: 1 1 440px; min-width: 0; }
+.pair .track { padding: 20px; gap: 16px; }
+.pair .strip { height: 56px; }
+.track-head .play-btn { margin-left: auto; }
+.track-hint { font-size: 13px; color: var(--dim); }
+.track-foot { min-height: 32px; }
+.track-foot .grid-fix { margin-left: auto; }
+.seam-row { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 20px; border-radius: 24px; background: var(--card); }
+.seam-row .compat { flex: 1; min-width: 0; gap: 8px 18px; }
+.seam-row .swap-btn { flex: none; background: var(--booth); color: var(--text); }
+.compat .score b { font-size: 40px; letter-spacing: -0.03em; }
+.pair-acts { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
+.pair-acts .btn { height: 52px; font-size: 17px; }
+.pair-acts .btn.primary { flex: 2 1 200px; }
+.pair-acts .btn:not(.primary) { flex: 1 1 140px; }
+
+.crate { flex: 1.5 1 560px; min-width: 0; }
+.crate-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 4px 16px; }
+.crate-head > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.crate-head h2 { font-size: 28px; }
+.crate-head span { font-size: 13px; color: var(--dim); }
+.crate-scroll { overflow-x: auto; }
+.crate-table { min-width: 560px; }
+.crate-cols, .crate-row { display: grid; grid-template-columns: 52px minmax(0, 1fr) 56px 64px 56px 72px 96px; align-items: center; gap: 16px; }
+.crate-cols { padding: 0 16px 8px 10px; font-size: 12px; color: var(--dim); }
+.crate-cols span:last-child { text-align: right; }
+.crate-rows { display: flex; flex-direction: column; gap: 6px; }
+.crate-row { padding: 10px 16px 10px 10px; border-radius: 20px; background: var(--booth); animation: card-in var(--dur-panel) var(--ease-out); }
+.c-num, .c-fit, .c-key b { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.c-key b, .c-key small { display: block; }
+.c-key small { font-size: 12px; color: var(--dim); }
+.c-dur { font-size: 15px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.c-fit.good { color: var(--coach-text); }
+.c-asg { display: flex; justify-content: flex-end; gap: 6px; }
+.asg { width: 40px; height: 40px; border-radius: 50%; font-size: 14px; font-weight: 700; background: var(--card); color: var(--dim); box-shadow: inset 0 0 0 1px var(--rail); transition: transform var(--dur-press) var(--ease-out), background-color var(--dur-ui) ease, color var(--dur-ui) ease, box-shadow var(--dur-ui) ease; }
+.asg:active { transform: scale(0.94); }
+.asg.a.on { background: var(--text); color: var(--ink); box-shadow: none; }
+.asg.b.on { color: var(--text); box-shadow: inset 0 0 0 2px var(--text); }
+@media (hover: hover) and (pointer: fine) { .asg:not(.on):hover { color: var(--text); box-shadow: inset 0 0 0 1px var(--dim); } }
+.crate-note { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 6px 0 0; padding: 18px; border-radius: 20px; box-shadow: inset 0 0 0 1px var(--rail); font-size: 14px; color: var(--dim); text-align: center; transition: box-shadow var(--dur-ui) ease, color var(--dur-ui) ease; }
+.crate-note svg { flex: none; }
+.crate.drag .crate-note { box-shadow: inset 0 0 0 2px var(--coach); color: var(--text); }
+
+.pairline { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 8px; font-size: 15px; color: var(--dim); }
+.pairline b { color: var(--text); font-weight: 500; }
+.pairline svg { flex: none; }
+.score-card { padding: 24px 28px; border-radius: 24px; background: var(--card); min-width: 0; }
+.score-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; margin-bottom: 20px; }
+.score-head > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }
+.score-head h2 { font-size: 28px; }
+.score-head span { font-size: 15px; color: var(--dim); }
+.score-head .score-meta { font-size: 13px; font-variant-numeric: tabular-nums; }
+.score-scroll { overflow-x: auto; }
+.sc-grid { position: relative; min-width: 720px; display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 12px; row-gap: 8px; align-items: center; animation: card-in var(--dur-panel) var(--ease-out); }
+.sc-grid > .dk { width: 32px; height: 32px; font-size: 13px; }
+.sc-ruler { position: relative; height: 24px; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+.sc-ruler .tick { position: absolute; top: 4px; transform: translateX(-50%); }
+.sc-ruler .hand { position: absolute; top: 0; z-index: 3; transform: translateX(-50%); height: 24px; padding: 0 12px; border-radius: 999px; background: var(--coach); color: var(--on-accent); font-size: 12px; font-weight: 600; display: flex; align-items: center; white-space: nowrap; }
+.sc-lane { position: relative; height: 48px; }
+.sc-lane .cap { position: absolute; top: 0; bottom: 0; box-sizing: border-box; border-right: 3px solid transparent; background-clip: padding-box; border-radius: 12px; display: flex; align-items: center; padding: 0 14px; font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; container-type: inline-size; }
+@container (max-width: 44px) { .sc-lane .cap span { visibility: hidden; } }
+.cap.s1 { background-color: var(--sec1); color: var(--st1); }
+.cap.s2 { background-color: var(--sec2); color: var(--st2); }
+.cap.s3 { background-color: var(--sec3); color: var(--st3); }
+.cap.s4 { background-color: var(--sec4); color: var(--st4); }
+.sc-moves { position: relative; }
+.mv { position: absolute; height: 32px; box-sizing: border-box; padding: 0 12px; border-radius: 999px; background: var(--card); box-shadow: inset 0 0 0 1px var(--rail); display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.mv.span { min-width: max-content; }
+.mv b { color: var(--coach-text); font-weight: 600; }
+.mv i { font-style: normal; font-weight: 500; color: var(--dim); }
+.sc-over { position: absolute; left: 44px; right: 0; top: 32px; bottom: 0; pointer-events: none; }
+.sc-over .band { position: absolute; top: 0; bottom: 0; border-radius: 16px; background: var(--booth); }
+.sc-over .line { position: absolute; top: -8px; bottom: 0; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--coach); }
+.score-foot { display: flex; flex-wrap: wrap; gap: 12px 40px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--booth-2); }
+.claude-line, .comment-line { margin: 0; display: flex; gap: 10px; line-height: 1.55; }
+.claude-line { flex: 1 1 320px; font-size: 15px; }
+.claude-line svg, .comment-line svg { flex: none; margin-top: 2px; color: var(--dim); }
+.claude-line.ai svg, .comment-line.ai svg { color: var(--coach-text); }
+.claude-line b, .comment-line b { font-weight: 600; }
+.pitfall { flex: 1 1 280px; margin: 0; font-size: 15px; line-height: 1.55; color: var(--dim); }
+.pitfall b { color: var(--text); font-weight: 600; }
+.plans { display: flex; flex-wrap: wrap; gap: 12px; }
+.plan { flex: 1 1 280px; padding: 20px 24px; gap: 18px; }
+.plan-name { font-size: 22px; }
+.plan-line { font-size: 13px; }
+.fit b { font-size: 28px; }
+.plan-bar .txt span { font-size: 15px; }
+.ask { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 12px 12px 24px; }
+.ask h2 { font-size: 15px; margin-right: 4px; }
+.ask form { flex: 1 1 220px; }
+.ask-log { flex-basis: 100%; padding: 4px 0 8px; }
+
+.session-bar .st { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; font-size: 13px; }
+#coachNext b { color: var(--text); font-weight: 500; }
+.lanes canvas { height: 178px; }
+.deck, .deck[data-deck="B"] { flex: 1 1 380px; flex-direction: column; justify-content: space-between; gap: 24px; padding: 20px; border-radius: 24px; background: #161617; box-sizing: border-box; }
+.knobs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); justify-items: center; gap: 8px; }
+.console .ctl { flex: none; }
+/* faders on the left, what they do to the mix on the right: the mixer stays as low as the decks */
+.mixer { flex: 0 1 430px; min-width: 300px; padding: 20px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 24px; }
+.mixer .mx-side { flex: 1; }
+.mx-faders { flex: none; display: flex; justify-content: center; align-items: stretch; gap: 14px; height: 168px; }
+.mx-faders .ctl-vf { width: 56px; }
+.mx-faders .vf { min-height: 0; }
+.mx-meters { display: flex; gap: 4px; padding: 14px 0; }
+.mx-meters u { position: relative; width: 6px; border-radius: 3px; background: var(--booth); overflow: hidden; text-decoration: none; }
+.mx-meters i { position: absolute; inset: 0; background: var(--text); transform-origin: bottom; transform: scaleY(0); }
+.mx-side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+#view-review .tile { border-radius: 36px; padding: 28px; }
+#view-review .score-tile, #view-review .next-tile { padding: 32px; }
+.score-tile { min-height: 380px; }
+.next-tile { gap: 20px; }
+.next-h { padding: 0; text-align: left; font-size: clamp(32px, 3.4vw, 48px); line-height: 1.1; word-break: keep-all; }
+.next-chip { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; padding: 16px 20px; border-radius: 24px; background: var(--card); }
+.next-chip .ins { height: auto; padding: 0; gap: 12px; background: none; font-size: 24px; letter-spacing: -0.02em; }
+.next-chip .dk { width: 44px; height: 44px; font-size: 17px; }
+.next-chip .ic, .next-chip .ic svg { width: 44px; height: 44px; }
+.next-note { display: flex; align-items: center; margin: 0 0 0 auto; height: 32px; padding: 0 12px; border-radius: 999px; background: color-mix(in oklab, var(--warn) 14%, var(--card)); color: var(--warn); font-size: 13px; font-weight: 600; }
+.comment-line { flex: 1; font-size: 17px; }
+.comment-line svg { margin-top: 4px; }
+.next-acts .btn { flex: 1 1 180px; height: 52px; font-size: 17px; }
+.next-acts .btn.primary { flex: 1.4 1 180px; }
+.next-acts .btn.link { flex: 0 1 auto; }
+.next-links { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 14px; }
+.metrics-tile { display: flex; flex-direction: column; gap: 18px; }
+.metrics-tile .metrics { gap: 14px; }
+.metric u { height: 24px; border-radius: 12px; }
+.metric u i { border-radius: 12px; }
+.metric.low u i { background: var(--warn); }
+.srow { flex-wrap: nowrap; gap: 8px 14px; }
+.srow .sbar { flex: none; width: 72px; text-align: center; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.srow .sins { display: flex; flex-wrap: wrap; gap: 4px 8px; min-width: 0; }
+.srow .note { flex: none; }
+
+@media (max-width: 1100px) {
+  .knobs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 8px; }
+  .deck, .deck[data-deck="B"] { flex: 1 1 calc(50% - 8px); }
+  .mixer { order: 3; flex: 1 1 100%; flex-direction: row; align-items: center; gap: 32px; }
+  .mixer .mx-side { flex: 1; }
+}
+@media (max-width: 760px) {
+  .wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .page-head { padding: 20px 0 24px; }
+  .deck, .deck[data-deck="B"] { flex-basis: 100%; }
+  .mixer { flex-direction: column; align-items: stretch; gap: 16px; }
+  .score-card { padding: 20px 16px; }
+  #view-review .tile, #view-review .score-tile, #view-review .next-tile { padding: 24px 20px; border-radius: 28px; }
+  .srow { flex-wrap: wrap; }
+  .srow .note { margin-left: 86px; }
+  .track-hint { display: none; }
+  .track-foot .grid-fix { margin-left: auto; }
+}
 </style>
 
 <header class="top">
@@ -549,7 +714,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
     <a class="brand" href="#" id="brandHome" aria-label="Segue 首页"><span class="mark" aria-hidden="true"><i></i><i></i></span>Segue</a>
     <nav class="steps" aria-label="流程">
       <button data-go="tracks" class="on">选歌</button>
-      <button data-go="plans" disabled>方案</button>
+      <button data-go="plans" disabled>接法</button>
       <button data-go="practice" disabled>练习</button>
       <button data-go="review" disabled>复盘</button>
     </nav>
@@ -591,64 +756,74 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
   </div>
 </dialog>
 
-<dialog class="sheet" id="library" aria-labelledby="libTitle">
-  <div class="sheet-in">
-    <div class="sheet-head">
-      <h2 id="libTitle">曲库</h2>
-      <button class="icon-btn" id="libClose" aria-label="关闭"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-    </div>
-    <div class="lib" id="libList"></div>
-    <label class="lib-row lib-up file-btn">
-      <span class="lib-cover"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg></span>
-      <span class="lib-main"><b>用自己的歌</b><small>MP3 · WAV · M4A，只在你的浏览器里分析</small></span>
-      <input type="file" id="libFile" accept="audio/*" aria-label="上传一首自己的歌">
-    </label>
-  </div>
-</dialog>
-
 <main class="wrap">
-  <!-- 1 · tracks -->
+  <!-- 1 · tracks: the pair on the left, the crate on the right -->
   <section class="view" id="view-tracks">
-    <div class="hero">
-      <p class="eyebrow">AI 混音教练</p>
-      <h1 id="slogan">两首歌，无缝接上。</h1>
-      <p class="lede" id="heroLede">放进两首歌，AI 给出三种接法，再一步一步带你练会。</p>
-      <div class="hero-acts">
-        <button class="btn primary" id="heroDemo" disabled><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5.8v12.4l9.6-6.2z"/></svg><span id="heroDemoTxt">正在准备歌曲…</span></button>
-        <button class="btn link" id="heroHow">怎么玩</button>
+    <div class="page-head">
+      <div>
+        <p class="eyebrow">AI 混音教练</p>
+        <h1 id="slogan">两首歌，无缝接上。</h1>
       </div>
+      <p class="lede" id="heroLede"><span>挑两首歌放上 A 和 B。</span><span>AI 排出三种接法，再一步一步带你练会。</span></p>
     </div>
-    <div class="tray">
-      <div class="track-grid">
+    <div class="cols">
+      <div class="tray pair" aria-label="这一对">
         <article class="track" data-deck="A" id="trackA"></article>
-        <button class="swap-btn" id="swapBtn" disabled aria-label="对调 A 和 B" title="对调 A 和 B"><span><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h15m0 0-4-4m4 4-4 4M20 16H5m0 0 4-4m-4 4 4 4"/></svg></span></button>
+        <div class="seam-row">
+          <aside class="compat" id="compat" aria-label="两首歌的契合度"></aside>
+          <button class="swap-btn" id="swapBtn" disabled aria-label="对调 A 和 B" title="对调 A 和 B"><span><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4v15m0 0-4-4m4 4 4-4M16 20V5m0 0-4 4m4-4 4 4"/></svg></span></button>
+        </div>
         <article class="track" data-deck="B" id="trackB"></article>
+        <div class="pair-acts">
+          <button class="btn primary" id="toPlans" disabled>看看怎么接</button>
+          <button class="btn" id="heroDemo" disabled><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5.8v12.4l9.6-6.2z"/></svg><span id="heroDemoTxt">准备中…</span></button>
+        </div>
       </div>
-      <div class="next-row">
-        <aside class="compat" id="compat" aria-label="两首歌的匹配度"></aside>
-        <button class="btn primary" id="toPlans" disabled>看看怎么接</button>
-      </div>
+      <section class="crate" id="crate" aria-label="曲库">
+        <div class="crate-head">
+          <div><h2>曲库</h2><span>6 首原创示例曲，浏览器现场合成</span></div>
+          <label class="btn sm quiet file-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>上传自己的歌<input type="file" id="crateFile" accept="audio/*" multiple aria-label="上传自己的歌"></label>
+        </div>
+        <div class="crate-scroll">
+          <div class="crate-table">
+            <div class="crate-cols" aria-hidden="true"><span></span><span>歌曲</span><span>BPM</span><span>调</span><span>时长</span><span>和 A 契合</span><span>放到</span></div>
+            <div class="crate-rows" id="crateRows"></div>
+          </div>
+        </div>
+        <p class="crate-note">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          也可以把 MP3、WAV、M4A 直接拖进来。歌只在你的浏览器里分析，不会上传。
+        </p>
+      </section>
     </div>
-    <p class="footnote">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-      6 首原创示例曲，也可以拖进自己的歌　只在你的浏览器里分析，不会上传
-    </p>
-    <ol class="how" id="how" aria-label="三步"></ol>
   </section>
 
-  <!-- 2 · plans -->
+  <!-- 2 · plans: one score shows how the two songs meet -->
   <section class="view" id="view-plans" hidden>
-    <h1>选一种接法。</h1>
-    <p class="lede" id="verdict"></p>
-    <div class="tray">
-    <div class="plans" id="plans"></div>
-    <div class="plan-bar">
-      <div class="txt"><b id="barName"></b><span id="barWhy"></span></div>
-      <div class="acts">
-        <button class="btn" id="demoBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5.8v12.4l9.6-6.2z"/></svg>先听示范</button>
-        <button class="btn primary" id="practiceBtn">开始练习</button>
-      </div>
+    <div class="page-head">
+      <h1>选一种接法。</h1>
+      <p class="pairline" id="pairLine"></p>
     </div>
+    <div class="tray">
+      <article class="score-card">
+        <div class="score-head">
+          <div><h2 id="barName"></h2><span id="barLine"></span></div>
+          <span class="score-meta" id="barMeta"></span>
+        </div>
+        <div class="score-scroll"><div class="sc-grid" id="score"></div></div>
+        <div class="score-foot">
+          <p class="claude-line" id="claudeLine"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3.5l1.9 5.6 5.6 1.9-5.6 1.9L11 18.5l-1.9-5.6L3.5 11l5.6-1.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" fill="currentColor"/></svg><span><b id="whoSays"></b><span id="barWhy"></span></span></p>
+          <p class="pitfall"><b>新手最容易错：</b><span id="barPit"></span></p>
+        </div>
+      </article>
+      <div class="plans" id="plans"></div>
+      <div class="plan-bar">
+        <div class="txt"><span>先看一遍，或者直接上手。示范中途动任何旋钮，就换你接手。</span></div>
+        <div class="acts">
+          <button class="btn" id="demoBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5.8v12.4l9.6-6.2z"/></svg>先听示范</button>
+          <button class="btn primary" id="practiceBtn">开始练习</button>
+        </div>
+      </div>
     </div>
     <div class="ask" id="askPlans"></div>
   </section>
@@ -656,13 +831,13 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
   <!-- 3 · practice -->
   <section class="view" id="view-practice" hidden>
     <div class="session-bar">
-      <h2 id="sessionTitle">练习</h2>
+      <div class="st"><h2 id="sessionTitle">练习</h2><button class="linkbtn" id="fullBtn" hidden>回到完整练习</button></div>
       <div class="seg" role="tablist" aria-label="模式">
         <button data-mode="demo" role="tab">示范</button>
         <button data-mode="guide" role="tab" class="on">跟练</button>
         <button data-mode="free" role="tab">自由</button>
       </div>
-      <button class="btn sm" id="backPlans"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>换方案</button>
+      <button class="btn sm" id="backPlans"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>换接法</button>
     </div>
     <p class="mobile-hint" id="mobileHint">练习台在电脑或横屏的平板上更好用<button aria-label="知道了" id="mobileHintX">知道了</button></p>
     <div class="island-wrap">
@@ -675,6 +850,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
         <span id="coachWhen" aria-live="polite">准备</span>
         <span id="coachWhy"></span>
         <span class="steptrack" id="stepDots" aria-hidden="true"></span>
+        <span id="coachNext" hidden>接着：<b></b></span>
         <span class="alerts" id="alerts"></span>
       </div>
     </div>
@@ -684,10 +860,10 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
     </div>
   </section>
 
-  <!-- 4 · review -->
+  <!-- 4 · review: one thing to change -->
   <section class="view" id="view-review" hidden>
     <div class="bento">
-      <section class="tile narrow score-tile">
+      <section class="tile narrow score-tile" aria-label="这次的分数">
         <div class="score-top"><span class="eyebrow" id="reviewTitle">这次过渡</span><span class="spark" id="scoreSpark"></span></div>
         <div>
           <div class="score-num" id="scoreNum">0</div>
@@ -695,24 +871,24 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
           <div class="score-sub" id="scoreSub"></div>
         </div>
       </section>
-      <section class="tile wide metrics" id="metrics" aria-label="五项评分"></section>
-      <section class="tile wide"><h2>每一步</h2><div class="steps-list" id="stepsList"></div></section>
-      <section class="tile narrow next-tile">
-        <h2>下次试试</h2>
+      <section class="tile wide next-tile" aria-label="下次怎么改">
+        <h1 class="next-h" id="nextH">下次只改这一件事。</h1>
         <div class="next-chip" id="nextChip"></div>
-        <p class="comment" id="comment"></p>
+        <p class="comment-line" id="commentLine"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3.5l1.9 5.6 5.6 1.9-5.6 1.9L11 18.5l-1.9-5.6L3.5 11l5.6-1.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" fill="currentColor"/></svg><span><b id="commentWho"></b><span id="comment"></span></span></p>
         <div class="next-acts">
           <button class="btn primary" id="againBtn">再练一次</button>
-          <button class="btn" id="watchBtn">看示范</button>
-          <button class="btn" id="newSongsBtn">换两首歌</button>
-          <button class="btn" id="otherBtn">换方案</button>
+          <button class="btn" id="drillBtn" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 1 3 6.2M4 19v-4.5h4.5"/></svg><span id="drillTxt">只练这一步</span></button>
+          <button class="btn link" id="watchBtn">看示范</button>
         </div>
+        <div class="next-links"><button class="linkbtn" id="otherBtn">换一种接法</button><button class="linkbtn" id="newSongsBtn">换两首歌</button></div>
       </section>
-      <section class="tile full compare">
-        <h2>你 vs 示范</h2>
-        <div class="legend"><span><i style="border-color:var(--coach);border-top-style:dashed"></i>示范</span><span><i style="border-color:var(--deck-a)"></i>A</span><span><i style="border-color:var(--deck-b)"></i>B</span><span><i style="border-color:var(--hot);border-top-width:6px;opacity:.5"></i>低频打架</span></div>
+      <section class="tile full compare" aria-label="这次过渡的回放">
+        <h2>你的手，和谱上写的</h2>
+        <div class="legend"><span><i style="border-color:var(--deck-a)"></i>你的 A</span><span><i style="border-color:var(--deck-b)"></i>你的 B</span><span><i style="border-color:var(--coach);border-top-style:dashed"></i>谱</span><span><i style="border-color:var(--hot);border-top-width:6px;opacity:.5"></i>两套低音叠在一起</span></div>
         <canvas id="compareCanvas"></canvas>
       </section>
+      <section class="tile narrow metrics-tile" aria-label="五项评分"><h2>五项</h2><div class="metrics" id="metrics"></div></section>
+      <section class="tile wide"><h2>每一步</h2><div class="steps-list" id="stepsList"></div></section>
     </div>
     <div class="ask" id="askReview"></div>
   </section>

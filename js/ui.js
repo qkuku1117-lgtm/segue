@@ -49,7 +49,7 @@
 
   const S = {
     view: 'tracks', tracks: { A: null, B: null }, planset: null, aiPlans: null, plan: null,
-    mode: 'guide', session: null, result: null, preview: null, cues: { A: 0, B: 0 }, chat: [],
+    mode: 'guide', session: null, result: null, preview: null, cues: { A: 0, B: 0 }, chat: [], userFiles: [], drill: null,
   };
   const SEC_LABEL = { intro: '前奏', verse: '主歌', pre: '预副歌', chorus: '副歌', drop: '高潮', break: '间奏', outro: '尾奏' };
   const secTier = type => type === 'drop' ? 1 : type === 'chorus' || type === 'pre' ? 2 : type === 'verse' || type === 'break' ? 3 : 4;
@@ -277,41 +277,78 @@
       h('i', { class: `dk lg dk-${id}`, 'aria-label': `Deck ${id}` }, id),
       h('div', { class: 'track-info' },
         h('div', { class: 'track-title' }, t && t.title ? t.title : '还没有歌'),
-        h('div', { class: 'track-sub' }, ready ? `${an.bpm} BPM · ${an.key.name} · ${an.key.camelot}${t.lib ? ' · ' + libOf(t.lib).genre : ''}` : t ? t.step || '准备中' : '拖一首歌进来')),
-      h('div', { class: 'track-acts' },
-        h('button', { class: 'icon-btn', title: '从曲库挑一首', 'aria-label': `为 Deck ${id} 打开曲库`, onclick: () => openLibrary(id), html: ICON.note }),
-        uploadBtn(id))));
+        h('div', { class: 'track-sub' }, ready ? `${an.bpm} BPM · ${an.key.name} · ${an.key.camelot}${t.lib ? ' · ' + libOf(t.lib).genre : ''}` : t ? t.step || '准备中' : '从曲库里挑一首')),
+      ready ? h('button', { class: 'play-btn', 'data-preview': id, 'aria-label': `试听 ${id}`, onclick: () => togglePreview(id) }) : null));
     if (!ready) {
-      card.append(h('div', { class: 'loading' }, t && t.error
-        ? h('div', { class: 'track-err' }, h('span', {}, t.error), h('button', { class: 'btn sm quiet', onclick: () => loadDemo(id) }, '先用示例曲'))
-        : null));
-      if (!(t && t.error)) {
-        // the loading card has the shape of the finished one, so nothing jumps when the song arrives
-        card.lastChild.remove();
-        card.append(h('div', { class: 'strip sk', 'aria-hidden': 'true' }, ...[1.2, 1, 2.2, 0.8, 3, 1.6].map(f => h('i', { style: `flex:${f}` }))),
-          h('div', { class: 'track-foot sk', 'aria-hidden': 'true' }, h('i', { class: 'sk-dot' }), h('i', { class: 'sk-line' })));
-      }
+      if (t && t.error) card.append(h('div', { class: 'loading' }, h('div', { class: 'track-err' }, h('span', {}, t.error), h('button', { class: 'btn sm quiet', onclick: () => loadDemo(id) }, '先用示例曲'))));
+      // the loading card has the shape of the finished one, so nothing jumps when the song arrives
+      else card.append(h('div', { class: 'strip sk', 'aria-hidden': 'true' }, ...[1.2, 1, 2.2, 0.8, 3, 1.6].map(f => h('i', { style: `flex:${f}` }))),
+        h('div', { class: 'track-foot sk', 'aria-hidden': 'true' }, h('i', { class: 'sk-line' })));
       return;
     }
     if (t.head == null) t.head = an.barTime(an.firstDrop ?? 0);
     // the row of capsules is the scrubber: a tap plays the section under the finger, a drag sets the exact spot
     const secs = an.sections.map(sec => {
       const name = SEC_LABEL[sec.type] || sec.type, from = an.barTime(sec.start), to = Math.min(an.duration, an.barTime(sec.end));
-      return h('button', { class: `sec s${secTier(sec.type)}`, style: `flex:${(to - from).toFixed(2)} 1 0`, title: name, 'data-name': name, 'aria-label': `从${name}开始试听`, onclick: e => { if (e.detail === 0) playFrom(id, from); } }, h('span', {}, name));
+      return h('button', { class: `sec s${secTier(sec.type)}`, style: `flex:${(to - from).toFixed(2)} 1 0`, title: name, 'aria-label': `从${name}开始试听`, onclick: e => { if (e.detail === 0) playFrom(id, from); } }, h('span', {}, name));
     });
     const strip = h('div', { class: 'strip', role: 'group', 'aria-label': `${t.title} 段落` }, ...secs, h('div', { class: 'playhead' }));
     card.append(strip);
     bindScrub(strip, id);
     card.append(h('div', { class: 'track-foot' },
-      h('button', { class: 'play-btn', 'data-preview': id, 'aria-label': '播放或暂停试听', onclick: () => togglePreview(id) }),
       h('span', { class: 'track-time' }, h('span', { 'data-now': '' }), h('small', {}, ` / ${fmtTime(an.duration)}`)),
+      h('span', { class: 'track-hint' }, '点一段，从那里开始听'),
       h('div', { class: 'grid-fix', title: '第一拍没对上？挪一拍' }, '对拍',
         h('button', { 'aria-label': '小节线左移一拍', onclick: () => nudgeGrid(id, -1), html: ICON.chev(-1) }),
         h('button', { 'aria-label': '小节线右移一拍', onclick: () => nudgeGrid(id, 1), html: ICON.chev(1) }))));
     setHead(id, t.head);
     previewButtons();
-    // a capsule too narrow for its name stays blank; the name is still its tooltip
-    requestAnimationFrame(() => secs.forEach(b => { b.textContent = b.clientWidth && b.clientWidth < 30 ? '' : b.dataset.name; }));
+  }
+
+  /* The crate: six tracks written for the demo, plus whatever the viewer brings. A row goes onto a deck with one tap. */
+  const USER_COVER = '<svg viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 30V13l14-3v17"/><circle cx="13.500" cy="30" r="3.500"/><circle cx="27.500" cy="27" r="3.500"/></svg>';
+  let uidSeq = 0;
+  function addUserFile(file) {
+    const had = S.userFiles.find(u => u.file.name === file.name && u.file.size === file.size);
+    if (had) return had;
+    const u = { id: 'u' + (++uidSeq), file, title: file.name.replace(/\.[^.]+$/, ''), an: null };
+    S.userFiles.push(u);
+    return u;
+  }
+  function crateRows() {
+    return [
+      ...Synth.LIBRARY.map(L => ({ id: L.id, lib: true, title: L.title, meta: `${L.genre} · ${L.mood}`, bpm: L.bpm, cam: L.camelot, key: L.key, dur: L.duration, cmp: { key: { num: L.num, letter: L.letter }, bpm: L.bpm }, cover: coverSVG(L.id) })),
+      ...S.userFiles.map(u => ({ id: u.id, title: u.title, meta: u.an ? '你的歌' : '你的歌 · 放上去后分析', bpm: u.an ? u.an.bpm : '—', cam: u.an ? u.an.key.camelot : '—', key: u.an ? u.an.key.name : '', dur: u.an ? u.an.duration : null, cmp: u.an, file: u.file, cover: USER_COVER })),
+    ];
+  }
+  function renderCrate() {
+    const box = $('#crateRows'), A = S.tracks.A, B = S.tracks.B;
+    const on = (t, r) => !!t && (r.lib ? t.lib === r.id : t.uid === r.id);
+    box.innerHTML = '';
+    crateRows().forEach(r => {
+      const here = { A: on(A, r), B: on(B, r) };
+      let fit = '—', good = false;
+      if (!here.A && A && A.status === 'ready' && r.cmp) { const v = Analysis.compat(A.an, r.cmp).overall; fit = String(v); good = v >= 80; }
+      const btn = d => h('button', { class: `asg ${d.toLowerCase()}` + (here[d] ? ' on' : ''), 'aria-pressed': here[d], 'aria-label': `${here[d] ? '已在' : '放到'} ${d}：${r.title}`, title: here[d] ? `已在 ${d}` : `放到 ${d}`, onclick: () => assign(d, r) }, d);
+      box.append(h('div', { class: 'crate-row' },
+        h('span', { class: 'lib-cover', html: r.cover }),
+        h('span', { class: 'lib-main' }, h('b', {}, r.title), h('small', {}, r.meta)),
+        h('span', { class: 'c-num' }, String(r.bpm)),
+        h('span', { class: 'c-key' }, h('b', {}, r.cam), h('small', {}, r.key)),
+        h('span', { class: 'c-dur' }, r.dur ? fmtTime(r.dur) : '—'),
+        h('span', { class: 'c-fit' + (good ? ' good' : '') }, fit),
+        h('span', { class: 'c-asg' }, btn('A'), btn('B'))));
+    });
+  }
+  function assign(deck, r) {
+    const other = deck === 'A' ? 'B' : 'A', on = t => !!t && (r.lib ? t.lib === r.id : t.uid === r.id);
+    if (on(S.tracks[deck])) return;
+    if (on(S.tracks[other])) {
+      const ok = ['A', 'B'].every(k => S.tracks[k] && S.tracks[k].status === 'ready');
+      if (ok) swapDecks(); else toast('等两首都准备好，再对调');
+      return;
+    }
+    if (r.lib) loadLib(deck, r.id); else loadFile(deck, r.file, r.id);
   }
   function uploadBtn(id) {
     const input = h('input', { type: 'file', accept: 'audio/*', 'aria-label': `为 Deck ${id} 选择音频文件` });
@@ -388,13 +425,14 @@
       trackCard(id);
     }
   }
-  async function loadFile(id, file) {
+  async function loadFile(id, file, uid) {
     if (S.preview) togglePreview(S.preview);
+    if (!uid) uid = addUserFile(file).id;
     const title = file.name.replace(/\.[^.]+$/, ''), tok = ++loadTok[id];
-    const fail = error => { if (tok !== loadTok[id]) return; S.tracks[id] = { status: 'error', step: '没能用这首歌', title, error }; trackCard(id); refreshTracksUI(); };
+    const fail = error => { if (tok !== loadTok[id]) return; S.tracks[id] = { status: 'error', step: '没能用这首歌', title, error, uid }; trackCard(id); refreshTracksUI(); };
     if (file.type && !/^audio\/|^video\/mp4/.test(file.type)) return fail('这不是音频文件。试试 MP3、WAV 或 M4A。');
     if (file.size > 120 * 1024 * 1024) return fail('文件太大了，选一首 120 MB 以内的歌。');
-    S.tracks[id] = { status: 'loading', step: '正在读取…', title, artist: '你的歌' };
+    S.tracks[id] = { status: 'loading', step: '正在读取…', title, artist: '你的歌', uid };
     trackCard(id); refreshTracksUI();
     let buf;
     try { buf = await Engine.context().decodeAudioData(await file.arrayBuffer()); }
@@ -402,7 +440,9 @@
     if (tok !== loadTok[id]) return;
     if (buf.duration < 60) return fail('太短了，选一首 1 分钟以上的歌。');
     if (buf.duration > 15 * 60) return fail('太长了，选一首 15 分钟以内的歌。');
-    await setTrack(id, buf, { title, artist: '你的歌', source: 'user' }, tok);
+    await setTrack(id, buf, { title, artist: '你的歌', source: 'user', uid }, tok);
+    const u = S.userFiles.find(x => x.id === uid), t = S.tracks[id];
+    if (u && t && t.uid === uid && t.status === 'ready') { u.an = t.an; renderCrate(); }
   }
   async function setTrack(id, buffer, meta, tok) {
     if (tok == null) tok = ++loadTok[id];
@@ -435,7 +475,9 @@
     const ready = ['A', 'B'].every(k => S.tracks[k] && S.tracks[k].status === 'ready');
     $('#toPlans').disabled = !ready;
     $('#heroDemo').disabled = !ready;
-    $('#heroDemoTxt').textContent = ready ? '先听一遍示范' : ['A', 'B'].some(k => S.tracks[k] && S.tracks[k].status === 'error') ? '先换一首歌' : '正在准备歌曲…';
+    $('#heroDemoTxt').textContent = ready ? '先听示范' : ['A', 'B'].some(k => S.tracks[k] && S.tracks[k].status === 'error') ? '先换一首' : '准备中…';
+    S.drill = null;
+    renderCrate();
     // any change to the songs invalidates everything downstream of them
     S.planset = ready ? Planner.make(S.tracks.A.an, S.tracks.B.an) : null;
     S.aiPlans = null; S.plan = null; S.result = null; S.picked = null; S.lastDemo = null;
@@ -527,29 +569,30 @@
 
   /* ================= view 2 · plans ================= */
   const PLAN_LINE = { swap: p => `两首叠 ${p.len} 小节，再换低音`, filter: () => 'B 慢慢变亮，A 慢慢变闷', echo: () => 'A 留个回声，B 直接进来' };
+  const ARROW = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>';
   function renderPlans(enter) {
     const ps = S.planset;
     if (!ps) return;
-    const A = S.tracks.A, B = S.tracks.B;
-    const ai = S.aiPlans;
-    const pickId = ai ? ai.pick : ps.pickId, pick = ps.plans.find(p => p.id === pickId);
+    const A = S.tracks.A, B = S.tracks.B, ai = S.aiPlans;
+    const pickId = ai ? ai.pick : ps.pickId;
     if (!S.picked) S.picked = pickId;
     const pending = Coach.state === 'online' && !ai && !S.aiPlansFailed;
-    $('#verdict').textContent = ai ? ai.headline : pending ? 'Claude 正在看这两首歌…' : (pick.tempoGap ? `两首速度差得多，用${pick.name}最稳。` : `这两首，用${pick.name}最顺。`);
+    const pl = $('#pairLine');
+    pl.innerHTML = '';
+    pl.append(h('i', { class: 'dk dk-A' }, 'A'), h('b', {}, A.title), h('span', { html: ARROW }), h('i', { class: 'dk dk-B' }, 'B'), h('b', {}, B.title),
+      h('span', {}, `· 契合度 ${ps.compat.overall} ·`), h('button', { class: 'linkbtn', onclick: () => go('tracks') }, '换歌'));
     const box = $('#plans'), hist = loadHist();
     box.innerHTML = '';
     ps.plans.forEach((p, i) => {
       const mine = hist.filter(x => x.p === p.id).map(x => x.s), best = mine.length ? Math.max(...mine) : null;
       box.append(h('button', { class: 'plan' + (enter ? ' pre' : ''), style: `transition-delay:${enter ? i * 70 : 0}ms`, 'data-plan': p.id, onclick: () => paintPick(p.id) },
-        planArt(p),
         h('span', { class: 'plan-head' },
           h('span', {}, h('span', { class: 'plan-name' }, p.name), h('span', { class: 'plan-line' }, PLAN_LINE[p.id](p))),
           h('span', { class: 'fit' }, h('b', {}, String(p.fit)), h('small', { class: p.id === pickId ? 'pick' : '' }, p.id === pickId ? (ai ? 'Claude 推荐' : '推荐') : '适合度'))),
         h('span', { class: 'plan-meta' },
           h('span', {}, `${p.len} 小节`),
-          h('span', { class: 'dots', 'aria-label': `难度 ${p.difficulty} / 3` }, ...[1, 2, 3].map(i => h('i', { class: i <= p.difficulty ? 'on' : '' }))),
-          best != null ? h('span', { class: 'best' }, `练过 ${mine.length} 次 · 最好 ${best}`) : null),
-        h('span', { class: 'script', 'aria-label': '步骤', html: p.steps.map(st => st.actions.map(a => ins(a, true)).join('')).join('') })));
+          h('span', { class: 'dots', 'aria-label': `难度 ${p.difficulty} / 3` }, ...[1, 2, 3].map(n => h('i', { class: n <= p.difficulty ? 'on' : '' }))),
+          h('span', { class: 'best' }, best != null ? `练过 ${mine.length} 次 · 最好 ${best}` : '还没练过'))));
     });
     paintPick(S.picked);
     if (enter) { const show = () => $$('.plan.pre', box).forEach(e => e.classList.remove('pre')); requestAnimationFrame(() => requestAnimationFrame(show)); setTimeout(show, 80); setTimeout(() => $$('.plan', box).forEach(e => { e.style.transitionDelay = ''; }), 700); }
@@ -566,35 +609,57 @@
   function paintPick(id) {
     S.picked = id;
     $$('.plan').forEach(el => { const on = el.dataset.plan === id; el.classList.toggle('on', on); el.setAttribute('aria-pressed', on); });
-    const p = S.planset.plans.find(x => x.id === id), copy = (S.aiPlans && S.aiPlans.plans && S.aiPlans.plans[id]) || Coach.fallbackPlanCopy(p);
+    const ps = S.planset, p = ps.plans.find(x => x.id === id), ai = S.aiPlans;
+    const copy = (ai && ai.plans && ai.plans[id]) || Coach.fallbackPlanCopy(p);
+    const pickId = ai ? ai.pick : ps.pickId, pending = Coach.state === 'online' && !ai && !S.aiPlansFailed;
     $('#barName').textContent = p.name;
+    $('#barLine').textContent = PLAN_LINE[p.id](p);
+    $('#barMeta').textContent = `${p.len} 小节 · 约 ${Math.round(p.len * 240 / S.tracks.A.an.bpm)} 秒 · ${p.actions.length} 个动作`;
+    $('#whoSays').textContent = id !== pickId ? '' : ai ? 'Claude 推荐这一种。' : pending ? 'Claude 正在看这两首歌…' : p.tempoGap ? '两首速度差得多，推荐这一种。' : '推荐这一种。';
+    $('#claudeLine').classList.toggle('ai', !!ai);
     $('#barWhy').textContent = copy.why;
-    $('#barWhy').title = copy.pitfall ? `易错：${copy.pitfall}` : '';
+    $('#barPit').textContent = copy.pitfall || '';
+    const sc = $('#score');
+    sc.innerHTML = '';
+    sc.append(...buildScore(p));
   }
-  /* The script drawn from the script: dark while a deck carries the weight of the mix, pale once it has let go,
-     with the blue line at the moment of handover and a trail of dots where an echo rings on. */
-  function planArt(p) {
-    const x0 = -2, x1 = p.len + 2, pc = b => clamp((b - x0) / (x1 - x0)) * 100;
-    const weight = (id, rel) => {
-      const c = Planner.stateAt(p, rel)[id], f = c.filter;
-      return clamp(c.fader * Math.min(1, Engine.eqLin(c.low)) * (f < 0 ? 1 + f * 0.8 : Math.max(0, 1 - f)));
+  // the moment the two songs change hands: where A gives up its bass, or is cut
+  const handOf = p => p.actions.find(a => a.deck === 'A' && a.dur === 0 && ((a.ctrl === 'low' && a.to === 0) || (a.ctrl === 'fader' && a.to === 0)));
+  /* The score: both songs on one bar ruler, every move of the plan pinned to the bar it happens on.
+     The same picture scrolls past on the practice stage and is drawn over in the review. */
+  function buildScore(p) {
+    const A = S.tracks.A.an, B = S.tracks.B.an;
+    const x0 = -8, x1 = p.len + 8, span = x1 - x0, f = b => clamp((b - x0) / span), pc = b => (f(b) * 100).toFixed(3) + '%', wd = (a, b) => ((f(b) - f(a)) * 100).toFixed(3) + '%';
+    const lane = (an, toRel, from, to) => an.sections.map(sec => {
+      const a = Math.max(from, toRel(sec.start)), b = Math.min(to, toRel(sec.end));
+      return b - a > 0.01 ? h('span', { class: `cap s${secTier(sec.type)}`, style: `left:${pc(a)};width:${wd(a, b)}` }, h('span', {}, SEC_LABEL[sec.type] || sec.type)) : null;
+    });
+    const moves = deck => {
+      const acts = p.actions.filter(a => a.deck === deck), merged = new Set(), rows = [];
+      // PLAY that lands with another move on the same bar is said in one chip
+      const items = acts.filter(a => { if (a.ctrl !== 'play') return true; const mate = acts.find(b => b !== a && b.bar === a.bar); if (mate) merged.add(mate); return !mate; });
+      const els = items.map(a => {
+        const k = (merged.has(a) ? 'PLAY + ' : '') + CTRL_SHORT[a.ctrl], v = verb(a);
+        const est = (34 + 13 * (k.length + v.length + (a.dur ? 4 : 0))) / 1000 * span;
+        let r = rows.findIndex(end => end <= a.bar + 0.01);
+        if (r < 0) r = rows.length;
+        rows[r] = a.bar + Math.max(a.dur, est) + span * 0.01;
+        return h('span', { class: 'mv' + (a.dur ? ' span' : ''), title: a.label || '', style: `left:${pc(a.bar)};top:${r * 36}px;${a.dur ? `width:${wd(a.bar, a.bar + a.dur)}` : ''}` }, k, v ? h('b', {}, v) : null, a.dur ? h('i', {}, `${a.dur} 小节`) : null);
+      });
+      return h('div', { class: 'sc-moves', style: `height:${Math.max(1, rows.length) * 36 - 4}px` }, els);
     };
-    const capsule = (id, from, to) => {
-      const stops = [];
-      for (let i = 0; i <= 32; i++) {
-        const rel = from + (to - from) * i / 32;
-        stops.push(`color-mix(in srgb, var(--text) ${Math.round(weight(id, Math.min(rel, to - 0.01)) * 100)}%, var(--rail)) ${(i / 32 * 100).toFixed(1)}%`);
-      }
-      return h('span', { class: 'cap', style: `left:${pc(from)}%;width:${pc(to) - pc(from)}%;background:linear-gradient(90deg,${stops.join(',')})` });
-    };
-    const outA = p.actions.filter(a => a.deck === 'A' && a.ctrl === 'fader').map(a => a.bar + a.dur).pop() ?? x1;
-    const laneA = h('span', { class: 'lane a' }, capsule('A', x0, outA));
-    if (p.actions.some(a => a.ctrl === 'echo' && a.to > 0)) {
-      [[14, .7], [10, .45], [7, .3], [4, .2]].forEach(([s, o], i) => laneA.append(h('span', { class: 'dot', style: `left:${pc(outA) + 4 + i * 7}%;width:${s}px;height:${s}px;opacity:${o}` })));
-    }
-    const hand = p.actions.find(a => a.deck === 'A' && a.dur === 0 && ((a.ctrl === 'low' && a.to === 0) || (a.ctrl === 'fader' && a.to === 0)));
-    return h('span', { class: 'art', 'aria-hidden': 'true' }, laneA, h('span', { class: 'lane b' }, capsule('B', p.playBar, x1)),
-      hand ? h('span', { class: 'cut', style: `left:calc(12px + (100% - 24px) * ${pc(hand.bar) / 100})` }) : null);
+    const hand = handOf(p), outA = p.actions.filter(a => a.deck === 'A' && a.ctrl === 'fader').map(a => a.bar + a.dur).pop() ?? p.len;
+    const ticks = [];
+    for (let b = 0; b <= p.len; b += 8) if (!hand || Math.abs(b - hand.bar) > 3) ticks.push(h('span', { class: 'tick', style: `left:${pc(b)}` }, String(b)));
+    return [
+      h('div', { class: 'sc-over', 'aria-hidden': 'true' }, h('span', { class: 'band', style: `left:${pc(p.playBar)};width:${wd(p.playBar, outA)}` })),
+      h('span'), h('div', { class: 'sc-ruler' }, ticks, hand ? h('span', { class: 'hand', style: `left:${pc(hand.bar)}` }, `第 ${hand.bar} 小节 · ${hand.ctrl === 'low' ? '换低音' : '交接'}`) : null),
+      h('i', { class: 'dk dk-A' }, 'A'), h('div', { class: 'sc-lane' }, lane(A, b => b - p.startA, x0, Math.min(x1, A.nBars - p.startA))),
+      h('span'), moves('A'),
+      h('i', { class: 'dk dk-B' }, 'B'), h('div', { class: 'sc-lane' }, lane(B, b => b - p.cueB + p.playBar, p.playBar, x1)),
+      h('span'), moves('B'),
+      hand ? h('div', { class: 'sc-over', 'aria-hidden': 'true' }, h('span', { class: 'line', style: `left:${pc(hand.bar)}` })) : null,
+    ].filter(Boolean);
   }
 
   function askPanel(box) {
@@ -640,25 +705,24 @@
     ui.sync = h('button', { class: 'tbtn sync', onclick: () => syncPressed(id), title: id === 'B' && FINE ? '同步（S）' : '同步', 'aria-label': `同步 Deck ${id}`, html: ICON.sync.replace('<svg', '<svg width="20" height="20"') });
     ui.play = h('button', { class: 'tbtn play', onclick: () => playPressed(id), title: id === 'B' && FINE ? '播放（空格）' : '播放', 'aria-label': `播放或暂停 Deck ${id}` });
     const k = (ctrl, label) => new Ctl(id, ctrl, 'knob', label).el;
-    const fader = new Ctl(id, 'fader', 'vf', '音量推子');
-    const meter = h('i');
-    fader.face.querySelector('.groove').append(meter);
-    deckUI[id + 'meter'] = meter;
     deckUI[id] = ui;
     return h('section', { class: 'deck', 'data-deck': id, 'aria-label': `Deck ${id}` },
-      h('div', { class: 'deck-main' },
-        h('div', { class: 'deck-info' }, h('i', { class: `dk lg dk-${id}` }, id), h('div', { class: 'meta' }, ui.title, ui.sub), ui.cue, ui.sync, ui.play),
-        h('div', { class: 'knobs' }, k('low', 'LOW'), k('mid', 'MID'), k('high', 'HIGH'), k('filter', 'FILTER'), k('echo', 'ECHO'), k('tempo', 'TEMPO'))),
-      fader.el);
+      h('div', { class: 'deck-info' }, h('i', { class: `dk lg dk-${id}` }, id), h('div', { class: 'meta' }, ui.title, ui.sub), ui.cue, ui.sync, ui.play),
+      h('div', { class: 'knobs' }, k('low', 'LOW'), k('mid', 'MID'), k('high', 'HIGH'), k('filter', 'FILTER'), k('echo', 'ECHO'), k('tempo', 'TEMPO')));
   }
+  // both channel faders live in the mixer, side by side with the level meters between them, as on real gear
   function mixerPanel() {
+    const fader = id => new Ctl(id, 'fader', 'vf', '音量推子').el;
+    const meter = id => { const i = h('i'); deckUI[id + 'meter'] = i; return h('u', {}, i); };
     const row = id => { const i = h('i'); deckUI[id + 'low'] = i; return h('div', { class: 'low-row' }, h('span', {}, id), h('u', {}, i)); };
-    const low = h('div', { class: 'lowmeter', title: '两台同时亮满就是低频打架' }, h('span', {}, '低频'), row('A'), row('B'));
+    const low = h('div', { class: 'lowmeter', title: '两台同时亮满就是低频打架' }, h('span', {}, '低频占用'), row('A'), row('B'));
     deckUI.low = low;
     deckUI.phase = h('div', { class: 'phase idle' }, h('i'), h('span', {}, '还没对拍'));
     const xf = new Ctl('X', 'xf', 'hf', '交叉推子');
-    return h('section', { class: 'mixer', 'aria-label': '调音台' }, low, deckUI.phase,
-      h('div', { class: 'xfade' }, h('div', { class: 'ends' }, h('span', {}, 'A'), h('span', {}, 'B')), xf.el));
+    return h('section', { class: 'mixer', 'aria-label': '调音台' },
+      h('div', { class: 'mx-faders' }, fader('A'), h('div', { class: 'mx-meters', 'aria-hidden': 'true' }, meter('A'), meter('B')), fader('B')),
+      h('div', { class: 'mx-side' }, low, deckUI.phase,
+        h('div', { class: 'xfade' }, h('div', { class: 'ends' }, h('span', {}, 'A'), h('span', {}, 'B')), xf.el)));
   }
 
   function playPressed(id) {
@@ -700,6 +764,7 @@
 
   function selectPlan(id, mode) {
     if (!S.planset) return go('tracks');
+    S.drill = null;
     S.plan = S.planset.plans.find(p => p.id === id);
     cancelSession();
     S.result = null;
@@ -717,6 +782,7 @@
     if (mode === S.mode && !S.session && !fresh && mode !== 'demo') return;
     if (S.session) cancelSession();
     S.mode = mode;
+    if (mode !== 'guide' && S.drill) { S.drill = null; paintDrill(); }
     $$('.seg button').forEach(b => { b.classList.toggle('on', b.dataset.mode === mode); b.setAttribute('aria-selected', b.dataset.mode === mode); });
     if (mode !== 'free' && S.plan) primeDecks();
     if (mode === 'demo') startSession();
@@ -726,7 +792,7 @@
   }
   function updateStartBtn() {
     const b = $('#startBtn');
-    b.innerHTML = (S.session ? ICON.stop : ICON.play.replace('<svg', '<svg width="14" height="14"')) + (S.session ? '停止' : S.mode === 'free' ? (Engine.decks.A && Engine.decks.A.playing ? '暂停 A' : '播放 A') : S.mode === 'demo' ? '再看一遍' : '开始');
+    b.innerHTML = (S.session ? ICON.stop : ICON.play.replace('<svg', '<svg width="14" height="14"')) + (S.session ? '停止' : S.mode === 'free' ? (Engine.decks.A && Engine.decks.A.playing ? '暂停 A' : '播放 A') : S.mode === 'demo' ? '再看一遍' : S.drill ? '开始单练' : '开始');
     b.classList.toggle('primary', !S.session);
     b.classList.toggle('quiet', !!S.session);
   }
@@ -736,11 +802,20 @@
     if (!p) return;
     Engine.resume();
     const A = Engine.decks.A, B = Engine.decks.B;
+    const dr = S.drill && S.mode === 'guide' && S.drill.plan === p ? S.drill : null;
     stopAll();
     if (S.mode === 'demo') { resetMixer(); }
     Engine.seek(A, S.cues.A); Engine.seek(B, S.cues.B);
-    S.session = { plan: p, mode: S.mode, rec: [], bStartRel: null, bStartBy: null, lastRec: 0, ended: false, synced: false, alerts: {} };
+    S.session = { plan: p, mode: S.mode, rec: [], bStartRel: null, bStartBy: null, lastRec: 0, ended: false, synced: false, alerts: {}, drill: dr };
+    if (dr) {
+      // a drill drops in a few bars before one step with the desk already set the way the script has it by then
+      const st0 = Planner.stateAt(p, dr.from);
+      ['A', 'B'].forEach(id => Object.keys(Planner.DEFAULTS[id]).forEach(k => applyCtrl(id, k, st0[id][k], 'reset')));
+      syncPressed('B');
+      Engine.seek(A, A.an.barTime(p.startA + dr.from));
+    }
     Engine.play(A);
+    if (dr && dr.from >= p.playBar) { catchUpB(p); S.session.bStartRel = p.playBar; S.session.bStartBy = 'drill'; }
     updateStartBtn();
   }
   function cancelSession() {
@@ -767,7 +842,7 @@
   function endSessionEarly() {
     const s = S.session;
     if (!s) return;
-    if (relNow() >= s.plan.playBar + 1 && s.mode !== 'demo') finishSession();
+    if (s.drill ? relNow() >= s.drill.step.end : relNow() >= s.plan.playBar + 1 && s.mode !== 'demo') finishSession();
     else { cancelSession(); toast('已停止，不计分'); }
   }
   function finishSession() {
@@ -777,6 +852,11 @@
     const result = Planner.evaluate(s.plan, s.rec, s);
     S.session = null;
     stopAll(); clearGhosts(); updateStartBtn();
+    if (s.drill) {
+      const sr = result.stepResults.find(x => x.step === s.drill.step);
+      toast(sr ? `这一步：${[...new Set(sr.parts.map(x => x.note))].join(' · ')}。可以再来一次` : '单练结束');
+      return;
+    }
     if (s.mode === 'demo') {
       S.lastDemo = { plan: s.plan, score: result.total };
       setMode('guide');
@@ -808,14 +888,22 @@
       s.bStartRel = p.playBar; s.bStartBy = 'demo';
     }
   }
-  function rescue(s, rel) {
-    const p = s.plan, A = Engine.decks.A, B = Engine.decks.B;
-    if (B.playing || s.bStartRel != null || rel < p.playBar + 1) return;
+  // start B where it would be had it started on time, so the phrases still line up
+  function catchUpB(p) {
+    const A = Engine.decks.A, B = Engine.decks.B;
     if (Math.abs(Engine.bpmNow(B) - Engine.bpmNow(A)) > 0.05) syncPressed('B');
-    // start B where it would be had it started on time, so the phrases still line up
     const nb = Math.ceil(Engine.beatPos(A) + 0.08), startBeat = (p.startA + p.playBar) * 4;
     B.offset = B.an.barTime(p.cueB) + (nb - startBeat) * B.an.beat;
     Engine.play(B, Engine.ctxTimeOf(A, A.an.down0 + nb * A.an.beat));
+  }
+  function paintDrill() {
+    $('#sessionTitle').textContent = S.plan ? S.plan.name + (S.drill ? ` · 单练第 ${S.drill.step.bar} 小节` : '') : '练习';
+    $('#fullBtn').hidden = !S.drill;
+  }
+  function rescue(s, rel) {
+    const p = s.plan, B = Engine.decks.B;
+    if (B.playing || s.bStartRel != null || rel < p.playBar + 1) return;
+    catchUpB(p);
     s.bStartRel = p.playBar; s.bStartBy = 'ai';
     toast('帮你按了 B 的 PLAY，这一步记一半分');
   }
@@ -845,13 +933,18 @@
     if (bothLow) alerts.push(['hot', '低频打架 · 关掉一边的 LOW']);
     if (phase != null && Math.abs(phase) > 25 && Engine.deckLevel(A) > 0.05 && Engine.deckLevel(B) > 0.05) alerts.push(['hot', `鼓点错开 ${Math.round(Math.abs(phase))} ms，按 SYNC`]);
 
-    let when = '', what = '', why = '', cnt = '', now = false;
+    let when = '', what = '', why = '', cnt = '', now = false, next = '';
     const ghosts = new Map(); const wanted = new Set();
     let stepIdx = null, stepN = 0;
     if (S.mode === 'free' || !p) {
       when = '自由'; what = '随便玩，不计分';
       why = '';
       cnt = countSVG(0, '∞', '自由', C.faint);
+    } else if (S.drill && !s) {
+      const st = S.drill.step;
+      when = `单练 · 第 ${st.bar} 小节`; what = st.actions.map(a => ins(a)).join('');
+      why = '按开始，从前几小节放起，台子会自动摆好';
+      cnt = countSVG(0, String(S.drill.to - S.drill.from), '小节', C.coach);
     } else {
       const prep = prepStatus(p);
       const relShown = s ? rel : -4;
@@ -889,6 +982,8 @@
         }
         what = st.actions.map(a => ins(a)).join('');
         why = st.actions.map(a => a.why).filter(Boolean)[0] || '';
+        const nx = steps[idx + 1];
+        if (nx) next = nx.actions.map(a => `${a.deck} ${CTRL_SHORT[a.ctrl]}${verb(a) ? ' ' + verb(a) : ''}`).join(' + ');
         if (!demo) {
           for (const a of p.actions) {
             if (a.ctrl === 'play') { if (Math.abs(a.bar - rel) <= 2 && s && s.bStartRel == null) wanted.add('B.play'); continue; }
@@ -912,6 +1007,7 @@
       $('#alerts').innerHTML = alerts.map(([k, t]) => `<span class="alert ${k === 'hot' ? '' : k}">${t}</span>`).join('');
     }
     card.classList.toggle('now', now);
+    if (card._next !== next) { card._next = next; const el = $('#coachNext'); el.hidden = !next; el.lastChild.textContent = next; }
     if (card._cnt !== cnt) { card._cnt = cnt; $('#count').innerHTML = cnt; }
     // a new instruction crossfades in; a ticking countdown just updates in place
     if (card._what !== what) {
@@ -961,20 +1057,27 @@
     const A = Engine.decks.A;
     if (!A || !A.an) return;
     const xc = Math.round(w * 0.28), realBar = A.an.beat * 4 / Engine.rate(A), pxs = w / (Math.min(24, w / 18) * realBar);
-    const top = 20, laneH = 44, gap = 6, laneY = li => top + li * (laneH + gap), p = S.mode !== 'free' ? S.plan : null;
+    const p = S.mode !== 'free' ? S.plan : null, rel = p ? relNow() : 0;
+    // the score, top to bottom: ruler, A, A's moves, B, B's moves
+    const laneH = 40, mvH = 24, yOf = { A: 24, B: 24 + laneH + 5 + mvH + 7 }, mvY = id => yOf[id] + laneH + 5;
     const xOfABar = b => xc + ((A.an.barTime(b) - Engine.pos(A)) / Engine.rate(A)) * pxs;
+    g.textBaseline = 'alphabetic'; g.textAlign = 'left';
     g.font = `500 11px ${FONT}`;
     if (p) {
-      const x0 = xOfABar(p.startA), x1 = xOfABar(p.startA + p.len);
-      g.fillStyle = C.booth; capsule(g, x0, top - 4, x1 - x0, H - top + 4, 12); g.fill();
+      const x0 = xOfABar(p.startA), x1 = xOfABar(p.startA + p.len), hand = handOf(p);
+      g.fillStyle = C.booth; capsule(g, x0, 18, x1 - x0, H - 18, 14); g.fill();
       g.fillStyle = C.dim;
-      for (let b = 0; b <= p.len; b += 8) { const x = xOfABar(p.startA + b); if (x > -20 && x < w) g.fillText(String(b), x + 2, 11); }
+      for (let b = 0; b <= p.len; b += 8) { if (hand && Math.abs(b - hand.bar) < 3) continue; const x = xOfABar(p.startA + b); if (x > -20 && x < w) g.fillText(String(b), x + 2, 12); }
+      if (hand) {
+        const x = xOfABar(p.startA + hand.bar);
+        if (x > -90 && x < w) { g.fillStyle = C.coach; g.font = `600 11px ${FONT}`; g.fillText(`${hand.bar} · ${hand.ctrl === 'low' ? '换低音' : '交接'}`, x + 4, 12); g.fillRect(x - 0.5, 18, 1, H - 18); g.font = `500 11px ${FONT}`; }
+      }
     } else {
       g.fillStyle = C.dim;
-      for (let b = 0; b <= A.an.nBars; b += 8) { const x = xOfABar(b); if (x > -20 && x < w) g.fillText(String(b + 1), x + 2, 11); }
+      for (let b = 0; b <= A.an.nBars; b += 8) { const x = xOfABar(b); if (x > -20 && x < w) g.fillText(String(b + 1), x + 2, 12); }
     }
-    ['A', 'B'].forEach((id, li) => {
-      const d = Engine.decks[id], y = laneY(li);
+    ['A', 'B'].forEach(id => {
+      const d = Engine.decks[id], y = yOf[id];
       if (!d.an) return;
       const pos = Engine.pos(d), rate = Engine.rate(d), c = d.ctrl, X = t => xc + (t - pos) / rate * pxs;
       structure(g, d.an, X, y, laneH, { w, r: 10, sticky: 40, past: xc, alpha: 0.35 + 0.65 * clamp(c.fader * 1.4), oneLine: true });
@@ -985,18 +1088,27 @@
       g.fillStyle = id === 'A' ? C.ink : C.text; g.font = `700 12px ${FONT}`; g.textAlign = 'center'; g.fillText(id, 18, y + laneH / 2 + 4); g.textAlign = 'left';
     });
     if (p) {
-      const stack = {};
+      // each move is a pill under its lane, starting on its bar; the one to do now is outlined
+      const last = { A: -1e9, B: -1e9 };
+      g.font = `600 11px ${FONT}`;
       for (const a of p.actions) {
-        const li = a.deck === 'A' ? 0 : 1, sk = a.deck + a.bar, n = (stack[sk] = (stack[sk] ?? -1) + 1), cy = laneY(li) + laneH / 2 + n * 14 - (n ? 7 : 0), x = xOfABar(p.startA + a.bar);
-        const x1 = xOfABar(p.startA + a.bar + a.dur);
-        if (x1 < -10 || x > w + 10) continue;
-        const col = x1 < xc ? C.faint : C.coach;
-        if (a.dur > 0) { g.fillStyle = alpha(col, 0.55); capsule(g, x, cy - 2, x1 - x, 4, 2); g.fill(); }
-        g.beginPath(); g.arc(x, cy, 6, 0, Math.PI * 2); g.fillStyle = col; g.fill();
-        g.strokeStyle = C.card; g.lineWidth = 2; g.stroke();
+        const y = mvY(a.deck), x = xOfABar(p.startA + a.bar), xe = xOfABar(p.startA + a.bar + a.dur);
+        const k = CTRL_SHORT[a.ctrl], v = verb(a), kw = g.measureText(k).width, tw = kw + (v ? g.measureText(v).width + 5 : 0);
+        const pw = Math.max(tw + 18, xe - x), px = Math.max(x, last[a.deck] + 6);
+        if (px + pw < -10 || px > w + 10) continue;
+        last[a.deck] = px + pw;
+        const past = rel > a.bar + a.dur + 0.5, live = !past && rel >= a.bar - 2;
+        g.fillStyle = C.card; capsule(g, px, y, pw, mvH, mvH / 2); g.fill();
+        g.strokeStyle = live ? C.coach : C.rail; g.lineWidth = live ? 1.5 : 1; capsule(g, px + 0.75, y + 0.75, pw - 1.5, mvH - 1.5, mvH / 2); g.stroke();
+        g.fillStyle = past ? C.dim : C.text; g.fillText(k, px + 9, y + 16);
+        if (v) { g.fillStyle = past ? C.dim : C.coach; g.fillText(v, px + 9 + kw + 5, y + 16); }
       }
     }
     g.fillStyle = C.text; capsule(g, xc - 1, 14, 2, H - 14, 1); g.fill();
+    g.font = `600 10px ${FONT}`;
+    const nw = g.measureText('现在').width + 14;
+    capsule(g, xc - nw / 2, 0, nw, 17, 8.5); g.fill();
+    g.fillStyle = C.ink; g.textAlign = 'center'; g.fillText('现在', xc, 12.5); g.textAlign = 'left';
   }
 
   /* ================= view 4 · review ================= */
@@ -1018,6 +1130,8 @@
     const pts = t.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
     return `<svg viewBox="0 0 ${w} ${hh}" width="${w}" height="${hh}" role="img" aria-label="最近 ${t.length} 次的分数：${t.join('、')}"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/><circle cx="${x(t.length - 1).toFixed(1)}" cy="${y(t[t.length - 1]).toFixed(1)}" r="3.5" fill="currentColor"/></svg>`;
   }
+  // a drill starts four bars before the step and runs two bars past it
+  const drillWindow = st => ({ from: Math.max(-4, Math.floor(st.bar) - 4), to: Math.ceil(st.end) + 2 });
   function renderReview() {
     const R = S.result;
     if (!R) return go('tracks');
@@ -1034,25 +1148,34 @@
     mx.innerHTML = '';
     Object.keys(Planner.METRIC_LABEL).forEach(k => {
       const v = Math.round(r.metrics[k] * 100);
-      mx.append(h('div', { class: 'metric pre', style: `--v:${(v / 100).toFixed(3)}` }, h('span', {}, Planner.METRIC_LABEL[k]), h('u', {}, h('i')), h('b', {}, String(v))));
+      mx.append(h('div', { class: 'metric pre' + (v < 70 ? ' low' : ''), style: `--v:${(v / 100).toFixed(3)}` }, h('span', {}, Planner.METRIC_LABEL[k]), h('u', {}, h('i')), h('b', {}, String(v))));
     });
-    // the one thing to change next time: the weakest thing the viewer did
-    const parts = r.stepResults.flatMap(sr => sr.parts), worst = parts.reduce((a, b) => b.score < a.score ? b : a, parts[0]);
-    $('#nextChip').innerHTML = worst && worst.score < 0.8 ? `${ins(worst.a, true)}<span class="next-note">${worst.note}</span>` : '';
-    const cm = $('#comment'), fallback = Coach.fallbackReview(r).split('\n').pop().replace(/^·\s*(下次目标：)?/, '');
+    // the one thing to change next time: the weakest move, and the step it belongs to
+    const parts = r.stepResults.flatMap(sr => sr.parts.map(x => ({ ...x, sr })));
+    const worst = parts.reduce((a, b) => b.score < a.score ? b : a, parts[0]), fix = !!worst && worst.score < 0.8;
+    R.drillStep = fix ? worst.sr.step : null;
+    $('#nextH').textContent = fix ? '下次只改这一件事。' : '这次没什么要改的。';
+    $('#nextChip').innerHTML = fix ? `${ins(worst.a, true)}<span class="next-note">${worst.note}</span>` : '';
+    $('#drillBtn').hidden = !fix;
+    if (fix) { const dw = drillWindow(worst.sr.step); $('#drillTxt').textContent = `只练这 ${dw.to - dw.from} 小节`; }
+    const cm = $('#comment'), who = $('#commentWho'), line = $('#commentLine');
+    const fallback = Coach.fallbackReview(r).split('\n').pop().replace(/^·\s*(下次目标：)?/, '');
+    const offline = () => { line.classList.remove('ai'); who.textContent = '教练：'; cm.textContent = fallback; };
     if (Coach.state === 'online') {
-      cm.textContent = 'Claude 正在写点评…';
+      line.classList.add('ai'); who.textContent = 'Claude：'; cm.textContent = '正在写点评…';
       Coach.review(S.tracks.A, S.tracks.B, p, r, t => { if (S.result === R) cm.textContent = t; }).then(t => {
         if (S.result !== R) return;
-        cm.textContent = t ? t.trim() : fallback;
+        if (t) cm.textContent = t.trim(); else offline();
       });
-    } else cm.textContent = fallback;
+    } else offline();
     const sl = $('#stepsList');
     sl.innerHTML = '';
     r.stepResults.forEach(sr => {
-      const ok = sr.score >= 0.75;
-      sl.append(h('div', { class: 'srow pre', style: `transition-delay:${sl.childElementCount * 50}ms`, html: sr.step.actions.map(a => ins(a, true)).join('') },
-        h('span', { class: 'note' + (ok ? ' ok' : ''), html: (ok ? ICON.check : '') + sr.parts.map(x => x.note).join(' · ') })));
+      const ok = sr.score >= 0.75, st = sr.step;
+      sl.append(h('div', { class: 'srow pre', style: `transition-delay:${sl.childElementCount * 50}ms` },
+        h('span', { class: 'sbar' }, st.end > st.bar ? `${st.bar} → ${st.end}` : `第 ${st.bar} 小节`),
+        h('span', { class: 'sins', html: st.actions.map(a => ins(a, true)).join('') }),
+        h('span', { class: 'note' + (ok ? ' ok' : ''), html: (ok ? ICON.check : '') + [...new Set(sr.parts.map(x => x.note))].join(' · ') })));
     });
     requestAnimationFrame(drawCompare);
     // the review is seen once per run, so it may arrive with a little ceremony
@@ -1060,7 +1183,6 @@
     requestAnimationFrame(() => requestAnimationFrame(reveal)); setTimeout(reveal, 80);
     askPanel($('#askReview'));
   }
-
   function drawCompare() {
     const R = S.result, cv = $('#compareCanvas');
     if (!R || !cv.isConnected) return;
@@ -1144,14 +1266,16 @@
       if (S.plan && S.mode !== 'free') primeDecks(); else { stopAll(); resetMixer(); }
       updateStartBtn();
       pill($('.seg'));
-      $('#sessionTitle').textContent = S.plan ? S.plan.name : '练习';
+      paintDrill();
       lastCoachKey = '';
     }
     if (view === 'review') renderReview();
   }
 
-  function frame() {
-    requestAnimationFrame(frame);
+  let lastTick = 0;
+  function frame() { requestAnimationFrame(frame); tick(); }
+  function tick() {
+    lastTick = performance.now();
     if (!Engine.decks.A) return;
     if (S.view === 'practice') {
       const s = S.session;
@@ -1160,7 +1284,7 @@
         rel = relNow();
         if (s.mode === 'demo') autopilot(s, rel); else rescue(s, rel);
         if (Engine.now - s.lastRec > 0.03) { s.lastRec = Engine.now; s.rec.push(sampleNow(rel)); }
-        if (rel > s.plan.len + 1.5) finishSession();
+        if (rel > (s.drill ? s.drill.to : s.plan.len + 1.5)) finishSession();
         else if (!Engine.decks.A.playing) endSessionEarly();
       }
       updateConsole(); coach(rel); drawLanes();
@@ -1221,33 +1345,6 @@
     bloom: '<circle cx="22" cy="14.500" r="5.500"/><circle cx="29.500" cy="22" r="5.500"/><circle cx="22" cy="29.500" r="5.500"/><circle cx="14.500" cy="22" r="5.500"/><circle cx="22" cy="22" r="2" fill="currentColor"/>',
   };
   const coverSVG = id => `<svg viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${COVER[id]}</svg>`;
-  let libDeck = 'A';
-  function openLibrary(id) {
-    libDeck = id;
-    const other = id === 'A' ? 'B' : 'A', mine = S.tracks[id], theirs = S.tracks[other], dlg = $('#library');
-    $('#libTitle').innerHTML = `<i class="dk lg dk-${id}">${id}</i>给 Deck ${id} 挑一首`;
-    const list = $('#libList');
-    list.innerHTML = '';
-    Synth.LIBRARY.forEach(L => {
-      const here = mine && mine.lib === L.id, there = theirs && theirs.lib === L.id;
-      let fit = null;
-      if (!there && theirs && theirs.status === 'ready') {
-        const me = { key: { num: L.num, letter: L.letter }, bpm: L.bpm };
-        fit = (id === 'A' ? Analysis.compat(me, theirs.an) : Analysis.compat(theirs.an, me)).overall;
-      }
-      list.append(h('button', { class: 'lib-row' + (here ? ' on' : ''), disabled: there, onclick: () => { dlg.close(); if (!here) loadLib(id, L.id); } },
-        h('span', { class: 'lib-cover', html: coverSVG(L.id) }),
-        h('span', { class: 'lib-main' }, h('b', {}, L.title), h('small', {}, `${L.genre} · ${L.mood}`)),
-        h('span', { class: 'lib-mini' }, `${L.bpm} BPM`, h('small', {}, there ? `已在 ${other}` : here ? '当前' : `${L.camelot} · ${L.key}`)),
-        h('span', { class: 'lib-fact' }, h('b', {}, String(L.bpm)), h('small', {}, 'BPM')),
-        h('span', { class: 'lib-fact' }, h('b', {}, L.camelot), h('small', {}, L.key)),
-        h('span', { class: 'lib-fact wide' }, h('b', {}, fmtTime(L.duration)), h('small', {}, '时长')),
-        h('span', { class: 'lib-state' }, there ? `已在 ${other}` : here ? '当前' : fit != null ? h('span', { class: 'lib-fit' + (fit >= 80 ? ' good' : '') }, h('b', {}, String(fit)), `和 ${other} 的契合度`) : '')));
-    });
-    if (S.preview) stopPreview();
-    dlg.showModal();
-  }
-
   /* ---- listener settings: volume and appearance, remembered in this browser ---- */
   const VOL = { v: 0.8, muted: false };
   const VOL_ICON = l => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.500v5h3.500l4.500 4v-13l-4.500 4z" fill="currentColor" stroke-width="1.500"/>${l === 0 ? '<path d="m16 9.500 5 5m0-5-5 5"/>' : l === 1 ? '<path d="M15.500 9.500a3.500 3.500 0 0 1 0 5"/>' : '<path d="M15.500 9.500a3.500 3.500 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/>'}</svg>`;
@@ -1286,9 +1383,21 @@
     try { th = localStorage.getItem('segue.theme') || 'auto'; } catch (e) { /* default */ }
     setTheme(THEMES.includes(th) ? th : 'auto', true);
     $('#themeBtn').addEventListener('click', () => setTheme(THEMES[(THEMES.indexOf($('#themeBtn').dataset.theme) + 1) % 3]));
-    $('#libClose').addEventListener('click', () => $('#library').close());
-    $('#library').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
-    $('#libFile').addEventListener('change', e => { const f = e.target.files[0]; if (f) { $('#library').close(); loadFile(libDeck, f); } e.target.value = ''; });
+    const bring = files => { const n = [...files].map(addUserFile).length; if (n) { renderCrate(); toast(n > 1 ? `${n} 首歌进了曲库，点 A 或 B 放上去` : '进了曲库，点 A 或 B 放上去'); } };
+    $('#crateFile').addEventListener('change', e => { bring(e.target.files); e.target.value = ''; });
+    const crate = $('#crate');
+    crate.addEventListener('dragover', e => { e.preventDefault(); crate.classList.add('drag'); });
+    crate.addEventListener('dragleave', () => crate.classList.remove('drag'));
+    crate.addEventListener('drop', e => { e.preventDefault(); crate.classList.remove('drag'); bring(e.dataTransfer.files); });
+    $('#fullBtn').addEventListener('click', () => { if (S.session) cancelSession(); S.drill = null; paintDrill(); if (S.plan) primeDecks(); updateStartBtn(); });
+    $('#drillBtn').addEventListener('click', () => {
+      const R = S.result;
+      if (!R || !R.drillStep) return;
+      const pl = R.plan, st = R.drillStep;
+      selectPlan(pl.id, 'guide');
+      S.drill = { plan: pl, step: st, ...drillWindow(st) };
+      paintDrill(); updateStartBtn();
+    });
   }
 
   /* ---- practice history, kept in this browser only ---- */
@@ -1320,9 +1429,7 @@
     $('#againBtn').addEventListener('click', () => { const id = S.result.plan.id; selectPlan(id, 'guide'); });
     $('#watchBtn').addEventListener('click', () => { const id = S.result.plan.id; selectPlan(id, 'demo'); });
     $('#otherBtn').addEventListener('click', () => go('plans'));
-    $('#how').innerHTML = howItems();
     $('#aiChip').addEventListener('click', () => openHelp('about'));
-    $('#heroHow').addEventListener('click', () => openHelp());
     $('#brandHome').addEventListener('click', e => { e.preventDefault(); go('tracks'); });
     $('#heroDemo').addEventListener('click', () => { if (S.planset) selectPlan(S.aiPlans ? S.aiPlans.pick : S.planset.pickId, 'demo'); });
     $('#newSongsBtn').addEventListener('click', () => go('tracks'));
@@ -1334,7 +1441,7 @@
     // a click on the dimmed backdrop lands on the dialog element itself
     $('#help').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
     document.addEventListener('keydown', e => {
-      if ($('#help').open || $('#library').open || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      if ($('#help').open || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.target.closest('input, textarea')) return;
       if (e.key === 'm' || e.key === 'M') { setVol({ muted: !VOL.muted }); return; }
       if (e.key === '?') { openHelp(); return; }
@@ -1369,6 +1476,14 @@
     loadDemo('A').catch(() => {}); loadDemo('B').catch(() => {});
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => pill($('nav.steps')));
     requestAnimationFrame(frame);
+    // a covered or throttled page stops getting animation frames while the audio plays on: keep the clock moving
+    setInterval(() => { if (performance.now() - lastTick > 400 && (S.session || S.preview)) tick(); }, 200);
+    // a run that carries on in a background tab cannot be followed or scored fairly, so it stops
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) return;
+      if (S.session) { cancelSession(); toast('切到后台了，这次不计分'); }
+      if (S.preview) stopPreview();
+    });
   }
   boot();
   window.__segue = { S, Engine, Planner };
