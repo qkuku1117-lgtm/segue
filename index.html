@@ -818,6 +818,28 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
 .deck .tt .tl { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; }
 .deck .tt .tl .t { min-width: 0; }
 @media (max-width: 900px) { .deck .tt .tl { justify-content: flex-start; } }
+
+/* ---------- finding songs online ---------- */
+.crate-acts { display: flex; gap: 8px; }
+.find-bar { display: flex; gap: 8px; }
+.find-bar input { flex: 1; min-width: 0; height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--booth); color: var(--text); font: inherit; font-size: 15px; outline: none; -webkit-appearance: none; appearance: none; }
+.find-bar input::placeholder { color: var(--dim); }
+.find-bar input:focus-visible { box-shadow: inset 0 0 0 2px var(--coach); }
+.find-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 16px; }
+.find-chips button { height: 34px; padding: 0 14px; border-radius: 999px; background: var(--booth); color: var(--dim); font-size: 13px; font-weight: 500; transition: background-color var(--dur-ui) ease, color var(--dur-ui) ease, transform var(--dur-press) var(--ease-out); }
+.find-chips button:active { transform: scale(0.97); }
+.find-chips button.on { background: var(--text); color: var(--ink); }
+.find-list { display: flex; flex-direction: column; gap: 6px; min-height: 344px; }
+.find-row { display: flex; align-items: center; min-height: 64px; border-radius: 20px; background: var(--booth); transition: background-color var(--dur-ui) ease; }
+.find-row.sk { animation: sk 1.2s ease-in-out infinite; }
+.find-pick { flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) 44px auto; align-items: center; gap: 14px; padding: 10px 4px 10px 18px; border-radius: 20px; text-align: left; color: inherit; cursor: pointer; }
+.find-lic { padding: 4px 9px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--rail); font-size: 11px; font-weight: 600; color: var(--dim); white-space: nowrap; }
+.find-src { flex: none; display: grid; place-items: center; width: 40px; height: 40px; margin: 0 8px 0 2px; color: var(--dim); background: transparent; }
+.find-msg { display: grid; place-items: center; min-height: 240px; padding: 0 24px; text-align: center; font-size: 14px; line-height: 1.5; color: var(--dim); }
+.find-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin: 16px 2px 0; font-size: 12px; color: var(--dim); }
+@media (hover: hover) and (pointer: fine) { .find-row:not(.sk):hover { background: var(--booth-2); } .find-chips button:not(.on):hover { color: var(--text); } .find-src:hover { color: var(--text); } }
+@media (max-width: 520px) { .find-pick { grid-template-columns: minmax(0, 1fr) auto; } .find-pick .c-dur { display: none; } }
+@media (prefers-reduced-motion: reduce) { .find-row.sk { animation: none; } }
 </style>
 
 <header class="top">
@@ -862,9 +884,25 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
     <ul class="about">
       <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 18V6M9 18v-8M14 18V9M19 18v-5"/></svg></span><span><b>规则引擎</b><small>测速度、找乐句、排方案、打分。每次结果都一样，离线也能用。</small></span></li>
       <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3.5l1.9 5.6 5.6 1.9-5.6 1.9L11 18.5l-1.9-5.6L3.5 11l5.6-1.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></span><span><b>Claude</b><small>在 claude.ai 里打开时，点评方案、写复盘、回答问题。不在线时由内置教练接手。</small></span></li>
-      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span><span><b>只在本机</b><small>歌曲在你的浏览器里解码和分析，不上传。曲库里的 6 首是浏览器现场合成的原创曲，自带调性标签；你上传的歌由分析器来测。</small></span></li>
+      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span><span><b>只在本机</b><small>歌曲在你的浏览器里解码和分析，不上传。曲库里的 6 首是浏览器现场合成的原创曲，自带调性标签；你上传的歌由分析器来测。“在线找”到的歌来自 Internet Archive，按各自的 CC 协议使用，只下载到这台电脑。</small></span></li>
     </ul>
     <p class="about-note">Segue 是一个 AI 产品作品集 Demo。</p>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="finder" aria-labelledby="finderTitle">
+  <div class="sheet-in">
+    <div class="sheet-head">
+      <h2 id="finderTitle">在线找歌</h2>
+      <button class="icon-btn" id="finderClose" aria-label="关闭"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <form class="find-bar" id="findForm">
+      <input id="findInput" type="search" placeholder="风格、艺人或厂牌" aria-label="搜索歌曲" autocomplete="off" enterkeyhint="search">
+      <button class="btn sm primary" type="submit">搜索</button>
+    </form>
+    <div class="find-chips" id="findChips" role="group" aria-label="风格"></div>
+    <div class="find-list" id="findList" aria-live="polite"></div>
+    <p class="find-note"><span>来自 Internet Archive 的网络厂牌，CC 授权。点一首下载到本机。</span><button class="linkbtn" type="button" id="findMore">换一批</button></p>
   </div>
 </dialog>
 
@@ -888,7 +926,10 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
       <section class="crate" id="crate" aria-label="曲库">
         <div class="crate-head">
           <div><h2>曲库</h2><span class="crate-pick">点一首放到<span class="seg" id="targetSeg" role="group" aria-label="换哪一张唱片"><button data-t="A" class="on">前一首</button><button data-t="B">后一首</button></span><span class="mouse-only">或拖到唱片上</span></span></div>
-          <label class="btn sm quiet file-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>上传<input type="file" id="crateFile" accept="audio/*" multiple aria-label="上传自己的歌"></label>
+          <div class="crate-acts">
+            <button class="btn sm quiet" id="findBtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></svg>在线找</button>
+            <label class="btn sm quiet file-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>上传<input type="file" id="crateFile" accept="audio/*" multiple aria-label="上传自己的歌"></label>
+          </div>
         </div>
         <div class="crate-scroll">
           <div class="crate-table">

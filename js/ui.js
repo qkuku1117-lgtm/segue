@@ -340,7 +340,7 @@
       } : null, `试听${t && t.title ? ' ' + t.title : ''}`, true),
       h('div', { class: 'track-info' },
         h('div', { class: 'track-title' }, t && t.title ? t.title : '还没有歌'),
-        h('div', { class: 'track-sub' }, ready ? `${an.bpm} BPM · ${an.key.name} · ${an.key.camelot}${t.lib ? ' · ' + libOf(t.lib).genre : ''}` : t ? t.step || '准备中' : '从曲库里挑一首')),
+        h('div', { class: 'track-sub' }, ready ? `${an.bpm} BPM · ${an.key.name} · ${an.key.camelot}${t.lib ? ' · ' + libOf(t.lib).genre : t.artist && t.artist !== '你的歌' ? ' · ' + t.artist : ''}` : t ? t.step || '准备中' : '从曲库里挑一首')),
       roleTag(id)));
     if (!ready) {
       if (t && t.error) card.append(h('div', { class: 'loading' }, h('div', { class: 'track-err' }, h('span', {}, t.error), h('button', { class: 'btn sm quiet', onclick: () => loadDemo(id) }, '先用示例曲'))));
@@ -381,7 +381,7 @@
   function crateRows() {
     return [
       ...Synth.LIBRARY.map(L => ({ id: L.id, lib: true, title: L.title, meta: `${L.genre} · ${L.mood}`, bpm: L.bpm, cam: L.camelot, key: L.key, dur: L.duration, cmp: { key: { num: L.num, letter: L.letter }, bpm: L.bpm }, cover: coverSVG(L.id) })),
-      ...S.userFiles.map(u => ({ id: u.id, title: u.title, meta: u.an ? '你的歌' : '你的歌 · 放上去后分析', bpm: u.an ? u.an.bpm : '—', cam: u.an ? u.an.key.camelot : '—', key: u.an ? u.an.key.name : '', dur: u.an ? u.an.duration : null, cmp: u.an, file: u.file, cover: USER_COVER })),
+      ...S.userFiles.map(u => ({ id: u.id, title: u.title, meta: u.credit ? `${u.credit.artist} · ${u.credit.lic}` : u.an ? '你的歌' : '你的歌 · 放上去后分析', bpm: u.an ? u.an.bpm : '—', cam: u.an ? u.an.key.camelot : '—', key: u.an ? u.an.key.name : '', dur: u.an ? u.an.duration : null, cmp: u.an, file: u.file, cover: USER_COVER })),
     ];
   }
   function renderCrate() {
@@ -486,7 +486,7 @@
         h('div', { class: 'score' }, h('b', {}, String(c.overall)), h('span', {}, '契合度'))),
       h('span', { class: 'sep' }),
       h('div', { class: 'fact' }, h('b', {}, `${A.an.key.camelot} → ${B.an.key.camelot}`), h('small', { class: keyCls }, c.rel)),
-      h('div', { class: 'fact', title: `变速带来 ${c.semis >= 0 ? '+' : ''}${c.semis.toFixed(2)} 半音的音高变化` }, h('b', {}, `${A.an.bpm} → ${B.an.bpm}`), h('small', { class: bpmCls }, `后一首${c.bpmPct >= 0 ? '加快' : '放慢'} ${Math.abs(c.bpmPct).toFixed(1)}%`)));
+      h('div', { class: 'fact', title: `变速带来 ${c.semis >= 0 ? '+' : ''}${c.semis.toFixed(2)} 半音的音高变化` }, h('b', {}, `${A.an.bpm} → ${B.an.bpm}`), h('small', { class: bpmCls }, Math.abs(c.bpmPct) < 0.05 ? '速度一样' : `后一首${c.bpmPct >= 0 ? '加快' : '放慢'} ${Math.abs(c.bpmPct).toFixed(1)}%`)));
   }
 
   // twelve hours of the Camelot wheel as dots; the two songs are the large ones
@@ -531,10 +531,11 @@
     if (S.preview) togglePreview(S.preview);
     if (!uid) uid = addUserFile(file).id;
     const title = file.name.replace(/\.[^.]+$/, ''), tok = ++loadTok[id];
+    const own = S.userFiles.find(x => x.id === uid), by = own && own.credit ? own.credit.artist : '你的歌';
     const fail = error => { if (tok !== loadTok[id]) return; S.tracks[id] = { status: 'error', step: '没能用这首歌', title, error, uid }; trackCard(id); refreshTracksUI(); };
     if (file.type && !/^audio\/|^video\/mp4/.test(file.type)) return fail('这不是音频文件。试试 MP3、WAV 或 M4A。');
     if (file.size > 120 * 1024 * 1024) return fail('文件太大了，选一首 120 MB 以内的歌。');
-    S.tracks[id] = { status: 'loading', step: '正在读取…', title, artist: '你的歌', uid };
+    S.tracks[id] = { status: 'loading', step: '正在读取…', title, artist: by, uid };
     trackCard(id); refreshTracksUI();
     let buf;
     try { buf = await Engine.context().decodeAudioData(await file.arrayBuffer()); }
@@ -542,7 +543,7 @@
     if (tok !== loadTok[id]) return;
     if (buf.duration < 60) return fail('太短了，选一首 1 分钟以上的歌。');
     if (buf.duration > 15 * 60) return fail('太长了，选一首 15 分钟以内的歌。');
-    await setTrack(id, buf, { title, artist: '你的歌', source: 'user', uid }, tok);
+    await setTrack(id, buf, { title, artist: by, source: 'user', uid }, tok);
     const u = S.userFiles.find(x => x.id === uid), t = S.tracks[id];
     if (u && t && t.uid === uid && t.status === 'ready') { u.an = t.an; renderCrate(); }
   }
@@ -1533,6 +1534,105 @@
     return all.filter(x => x.p === planId).map(x => x.s);
   }
 
+  /* ---- finding songs online: Creative Commons releases in the Internet Archive's netlabel collection.
+     Its search, file lists and audio all carry open CORS headers, so a page can download a song and analyse it
+     like an upload. Licences that forbid derivatives are left out: a mix is one. ---- */
+  const IA = 'https://archive.org';
+  const FIND_STYLES = ['Deep House', 'Tech House', 'House', 'Techno', 'Minimal', 'Disco'];
+  const EXT_ICON = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 5h5v5M19 5l-8 8M11 6H7a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2v-4"/></svg>';
+  const Find = { q: null, page: 1, tok: 0 };
+  const ccName = url => { const m = /licenses\/([a-z-]+)\/([\d.]+)/.exec(url || ''); return m ? `CC ${m[1].toUpperCase()} ${m[2]}` : /zero|publicdomain/.test(url || '') ? 'CC0' : 'CC'; };
+  const secOf = v => v == null ? 0 : String(v).split(':').reduce((a, b) => a * 60 + (parseFloat(b) || 0), 0);
+  const one = v => Array.isArray(v) ? v[0] : v;
+  function findState(msg) { const list = $('#findList'); list.innerHTML = ''; list.append(h('div', { class: 'find-msg' }, msg)); }
+  async function findSongs(q, page) {
+    const list = $('#findList'), tok = ++Find.tok;
+    Find.q = q; Find.page = page || 1;
+    $$('#findChips button').forEach(b => b.classList.toggle('on', q.style === b.textContent));
+    list.innerHTML = '';
+    list.append(...[0, 1, 2, 3, 4].map(() => h('div', { class: 'find-row sk', 'aria-hidden': 'true' })));
+    const what = q.style ? `subject:("${q.style.toLowerCase()}")` : `(${q.text.replace(/[^\p{L}\p{N}\s-]/gu, ' ').trim()})`;
+    const query = `collection:netlabels AND mediatype:audio AND licenseurl:*creativecommons* AND NOT licenseurl:*nd* AND ${what}`;
+    const url = `${IA}/advancedsearch.php?q=${encodeURIComponent(query)}&fl[]=identifier&fl[]=title&fl[]=creator&fl[]=licenseurl&sort[]=${encodeURIComponent('downloads desc')}&rows=6&page=${Find.page}&output=json`;
+    let docs;
+    try { docs = (await (await fetch(url)).json()).response.docs; }
+    catch (e) { if (tok === Find.tok) findState('连不上 Internet Archive。这个页面可能不能联网，换单文件版再试。'); return; }
+    if (tok !== Find.tok) return;
+    if (!docs.length) { findState(Find.page > 1 ? '没有更多了。' : '没找到，换个词试试。'); return; }
+    let shown = 0;
+    await Promise.all(docs.map(async d => {
+      let m;
+      try { m = await (await fetch(`${IA}/metadata/${encodeURIComponent(d.identifier)}`)).json(); } catch (e) { return; }
+      if (tok !== Find.tok || !m || !m.files) return;
+      // single songs only: long enough to mix, short enough to download
+      // (a release often carries the same song at several bitrates: keep the uploader's own file, once per title)
+      const seen = new Set();
+      const songs = m.files.filter(f => /\.mp3$/i.test(f.name) && secOf(f.length) >= 150 && secOf(f.length) <= 540 && +f.size <= 30e6)
+        .sort((a, b) => (b.source === 'original') - (a.source === 'original'))
+        .filter(f => { const k = String(f.title || f.name).toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; })
+        .sort((a, b) => a.name.localeCompare(b.name)).slice(0, 3);
+      if (!songs.length) return;
+      if (!shown++) list.innerHTML = '';
+      const release = String(one(d.title) || d.identifier).replace(/\s*[\[(][^\])]*[\])]\s*/g, ' ').trim() || d.identifier;
+      songs.forEach(f => list.append(findRow({
+        id: d.identifier, name: f.name, len: secOf(f.length), size: +f.size, release, lic: ccName(one(d.licenseurl)),
+        title: String(f.title || f.name.replace(/\.mp3$/i, '').replace(/^\d+[\s._-]*/, '')).replace(/[\/\\]/g, '-'),
+        artist: f.artist || f.creator || one(d.creator) || '未知艺人',
+      })));
+    }));
+    if (tok === Find.tok && !shown) findState('这一批没有长度合适的歌，点“换一批”。');
+  }
+  function findRow(it) {
+    return h('div', { class: 'find-row' },
+      h('button', { class: 'find-pick', 'aria-label': `${it.title}，${it.artist}，放到${ROLE[S.target]}`, onclick: () => { $('#finder').close(); loadRemote(S.target, it); } },
+        h('span', { class: 'lib-main' }, h('b', {}, it.title), h('small', {}, `${it.artist} · ${it.release}`)),
+        h('span', { class: 'c-dur' }, fmtTime(it.len)),
+        h('span', { class: 'find-lic' }, it.lic)),
+      h('a', { class: 'icon-btn find-src', href: `${IA}/details/${encodeURIComponent(it.id)}`, target: '_blank', rel: 'noopener', 'aria-label': '在 Internet Archive 查看来源和授权', title: '来源和授权', html: EXT_ICON }));
+  }
+  function openFinder() {
+    if (S.preview) stopPreview();
+    const chips = $('#findChips');
+    if (!chips.childElementCount) FIND_STYLES.forEach(s => chips.append(h('button', { type: 'button', onclick: () => { $('#findInput').value = ''; findSongs({ style: s }); } }, s)));
+    $('#finder').showModal();
+    if (!Find.q) findSongs({ style: FIND_STYLES[0] });
+  }
+  // a found song is downloaded into this browser, joins the crate as a row, and from there is an upload like any other
+  async function loadRemote(id, it) {
+    const key = `${it.id}/${it.name}`, had = S.userFiles.find(u => u.credit && u.credit.key === key);
+    if (had) { assign(id, crateRows().find(r => r.id === had.id)); return; }
+    if (S.preview) stopPreview();
+    const tok = ++loadTok[id];
+    S.tracks[id] = { status: 'loading', step: '正在下载…', title: it.title, artist: it.artist };
+    trackCard(id); refreshTracksUI();
+    let blob;
+    try {
+      const res = await fetch(`${IA}/download/${encodeURIComponent(it.id)}/${it.name.split('/').map(encodeURIComponent).join('/')}`);
+      if (!res.ok) throw new Error(res.status);
+      const total = +res.headers.get('content-length') || it.size, reader = res.body.getReader(), parts = [];
+      let got = 0, last = -1;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (tok !== loadTok[id]) { reader.cancel(); return; }
+        parts.push(value); got += value.length;
+        const pct = Math.min(99, Math.round(got / total * 100));
+        if (pct !== last) { last = pct; S.tracks[id].step = `正在下载… ${pct}%`; const el = $(`#track${id} .track-sub`); if (el) el.textContent = S.tracks[id].step; }
+      }
+      blob = new Blob(parts, { type: 'audio/mpeg' });
+    } catch (e) {
+      if (tok !== loadTok[id]) return;
+      S.tracks[id] = { status: 'error', step: '没能用这首歌', title: it.title, error: '下载失败了，换一首或稍后再试。' };
+      trackCard(id); refreshTracksUI(); return;
+    }
+    if (tok !== loadTok[id]) return;
+    const file = new File([blob], it.title + '.mp3', { type: 'audio/mpeg' });
+    const u = addUserFile(file);
+    u.credit = { key, artist: it.artist, lic: it.lic, url: `${IA}/details/${encodeURIComponent(it.id)}` };
+    renderCrate();
+    await loadFile(id, file, u.id);
+  }
+
   /* ---- first visit: a short walk through the first page. Each step is pinned to the thing it is about,
      the rest of the page is dimmed and blurred. As many steps as there are things to point at, no more. ---- */
   const TOUR_KEY = 'segue.tour.v1';
@@ -1680,11 +1780,16 @@
     $('#helpBtn').addEventListener('click', openHelp);
     $('#footHelp').addEventListener('click', openHelp);
     $('#helpClose').addEventListener('click', () => $('#help').close());
+    $('#findBtn').addEventListener('click', openFinder);
+    $('#finderClose').addEventListener('click', () => $('#finder').close());
+    $('#finder').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+    $('#findForm').addEventListener('submit', e => { e.preventDefault(); const text = $('#findInput').value.trim(); if (text) findSongs({ text }); });
+    $('#findMore').addEventListener('click', () => { if (Find.q) findSongs(Find.q, Find.page + 1); });
     $('#tourAgain').addEventListener('click', () => { $('#help').close(); go('tracks'); setTimeout(startTour, 120); });
     // a click on the dimmed backdrop lands on the dialog element itself
     $('#help').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
     document.addEventListener('keydown', e => {
-      if (Tour.on || $('#help').open || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (Tour.on || $('#help').open || $('#finder').open || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.target.closest('input, textarea')) return;
       if (e.key === 'm' || e.key === 'M') { setVol({ muted: !VOL.muted }); return; }
       if (e.key === '?') { openHelp(); return; }
