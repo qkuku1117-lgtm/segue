@@ -60,6 +60,7 @@
     fader: v => `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="10.75" y="3" width="2.5" height="18" rx="1.25" fill="currentColor" opacity=".28"/><rect x="6.5" y="${(3 + (1 - v) * 14).toFixed(1)}" width="11" height="4" rx="1.5" fill="currentColor"/></svg>`,
     play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 5.8v12.4l9.6-6.2z" fill="currentColor"/></svg>',
     pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="13.5" y="5" width="4" height="14" rx="1.2" fill="currentColor"/></svg>',
+    note: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 17.5V6l10-2v11.5"/><circle cx="6.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="15.5" r="2.5"/></svg>',
     upload: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>',
     chev: d => `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d < 0 ? 'm15 5-7 7 7 7' : 'm9 5 7 7-7 7'}"/></svg>`,
     stop: '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="3" fill="currentColor"/></svg>',
@@ -136,7 +137,7 @@
       const aria = { role: 'slider', tabindex: 0, 'aria-label': `${deck === 'X' ? '' : deck + ' '}${label}`, 'aria-valuemin': min, 'aria-valuemax': max };
       if (kind === 'knob') {
         this.face = h('div', { class: 'knob', ...aria });
-        this.face.innerHTML = `<svg viewBox="-26 -26 52 52"><circle class="cap" r="19"/><line class="ptr" x1="0" y1="-7" x2="0" y2="-15"/><circle class="gdot" r="2.5" cx="0" cy="-24" style="display:none"/></svg>`;
+        this.face.innerHTML = `<svg viewBox="-26 -26 52 52"><path class="trk" d="${arc(23.5, -135, 135)}"/><path class="val"/><circle class="cap" r="17"/><line class="ptr" x1="0" y1="-6" x2="0" y2="-13"/><circle class="gdot" r="3" cx="0" cy="-23.5" style="display:none"/></svg>`;
         this.el.append(this.face, h('span', { class: 'lab' }, label));
       } else {
         this.face = h('div', { class: kind, ...aria }, h('div', { class: 'groove' }), h('div', { class: 'ghost' }), h('div', { class: 'cap' }));
@@ -223,10 +224,11 @@
       if (this.kind === 'knob') {
         const a = -135 + 270 * n, svg = this.face.firstChild;
         svg.querySelector('.ptr').setAttribute('transform', `rotate(${a})`);
+        svg.querySelector('.val').setAttribute('d', BIPOLAR.has(this.ctrl) ? arc(23.5, Math.min(0, a), Math.max(0, a)) : arc(23.5, -135, a));
         const gd = svg.querySelector('.gdot');
         if (this.ghost == null) gd.style.display = 'none';
         else {
-          const [x, y] = pt(24, -135 + 270 * this.norm(this.ghost));
+          const [x, y] = pt(23.5, -135 + 270 * this.norm(this.ghost));
           gd.style.display = ''; gd.setAttribute('cx', x.toFixed(2)); gd.setAttribute('cy', y.toFixed(2));
         }
       } else {
@@ -275,12 +277,20 @@
       h('i', { class: `dk lg dk-${id}`, 'aria-label': `Deck ${id}` }, id),
       h('div', { class: 'track-info' },
         h('div', { class: 'track-title' }, t && t.title ? t.title : '还没有歌'),
-        h('div', { class: 'track-sub' }, ready ? `${an.bpm} BPM · ${an.key.name} · ${an.key.camelot}` : t ? t.step || '准备中' : '拖一首歌进来')),
-      uploadBtn(id)));
+        h('div', { class: 'track-sub' }, ready ? `${an.bpm} BPM · ${an.key.name} · ${an.key.camelot}${t.lib ? ' · ' + libOf(t.lib).genre : ''}` : t ? t.step || '准备中' : '拖一首歌进来')),
+      h('div', { class: 'track-acts' },
+        h('button', { class: 'icon-btn', title: '从曲库挑一首', 'aria-label': `为 Deck ${id} 打开曲库`, onclick: () => openLibrary(id), html: ICON.note }),
+        uploadBtn(id))));
     if (!ready) {
       card.append(h('div', { class: 'loading' }, t && t.error
         ? h('div', { class: 'track-err' }, h('span', {}, t.error), h('button', { class: 'btn sm quiet', onclick: () => loadDemo(id) }, '先用示例曲'))
-        : h('div', { class: 'bars' }, h('i'), h('i'), h('i'), h('i'), h('i'))));
+        : null));
+      if (!(t && t.error)) {
+        // the loading card has the shape of the finished one, so nothing jumps when the song arrives
+        card.lastChild.remove();
+        card.append(h('div', { class: 'strip sk', 'aria-hidden': 'true' }, ...[1.2, 1, 2.2, 0.8, 3, 1.6].map(f => h('i', { style: `flex:${f}` }))),
+          h('div', { class: 'track-foot sk', 'aria-hidden': 'true' }, h('i', { class: 'sk-dot' }), h('i', { class: 'sk-line' })));
+      }
       return;
     }
     if (t.head == null) t.head = an.barTime(an.firstDrop ?? 0);
@@ -354,14 +364,24 @@
   }
 
   const loadTok = { A: 0, B: 0 };
-  async function loadDemo(id) {
-    const demo = Synth.DEMOS[id], tok = ++loadTok[id];
-    S.tracks[id] = { status: 'loading', step: '正在生成示例曲…', title: demo.title, artist: demo.artist };
-    trackCard(id);
+  const DECK_KEY = 'segue.decks.v1';
+  const savedDecks = () => { try { return JSON.parse(localStorage.getItem(DECK_KEY)) || {}; } catch (e) { return {}; } };
+  const libOf = id => Synth.LIBRARY.find(x => x.id === id);
+  function loadDemo(id) {
+    const other = S.tracks[id === 'A' ? 'B' : 'A'], want = savedDecks()[id];
+    const pick = libOf(want) && !(other && other.lib === want) ? libOf(want) : Synth.LIBRARY.find(x => !(other && other.lib === x.id) && x.id === Synth.DEMOS[id].id) || Synth.LIBRARY.find(x => !(other && other.lib === x.id));
+    return loadLib(id, pick.id);
+  }
+  async function loadLib(id, libId) {
+    const demo = libOf(libId), tok = ++loadTok[id];
+    if (S.preview) stopPreview();
+    S.tracks[id] = { status: 'loading', step: '正在生成…', title: demo.title, artist: demo.artist, lib: demo.id };
+    trackCard(id); refreshTracksUI();
+    try { localStorage.setItem(DECK_KEY, JSON.stringify({ ...savedDecks(), [id]: demo.id })); } catch (e) { /* not kept */ }
     try {
       const buf = await demo.render();
       if (tok !== loadTok[id]) return;
-      await setTrack(id, buf, { title: demo.title, artist: demo.artist, source: 'demo' }, tok);
+      await setTrack(id, buf, { title: demo.title, artist: demo.artist, source: 'demo', lib: demo.id }, tok);
     } catch (e) {
       if (tok !== loadTok[id]) return;
       S.tracks[id] = { status: 'error', step: '示例曲合成失败', error: '这个浏览器放不了示例曲，换 Chrome 或 Safari，或者上传一首歌。' };
@@ -397,6 +417,8 @@
       S.tracks[id] = { ...meta, status: 'error', step: '没能用这首歌', error: !an ? '这首歌分析失败了，换一首试试。' : '这首歌太短或拍子太乱，换一首节奏稳定的歌。' };
       trackCard(id); refreshTracksUI(); return;
     }
+    // a crate track carries the key it was written in, the way a tagged file does; uploads are measured
+    if (meta.lib) an.key = Analysis.keyInfo(libOf(meta.lib).tonic, true);
     S.tracks[id] = { ...meta, status: 'ready', buffer, an };
     Engine.load(id, buffer, an);
     trackCard(id);
@@ -413,6 +435,7 @@
     const ready = ['A', 'B'].every(k => S.tracks[k] && S.tracks[k].status === 'ready');
     $('#toPlans').disabled = !ready;
     $('#heroDemo').disabled = !ready;
+    $('#heroDemoTxt').textContent = ready ? '先听一遍示范' : ['A', 'B'].some(k => S.tracks[k] && S.tracks[k].status === 'error') ? '先换一首歌' : '正在准备歌曲…';
     // any change to the songs invalidates everything downstream of them
     S.planset = ready ? Planner.make(S.tracks.A.an, S.tracks.B.an) : null;
     S.aiPlans = null; S.plan = null; S.result = null; S.picked = null; S.lastDemo = null;
@@ -504,7 +527,7 @@
 
   /* ================= view 2 · plans ================= */
   const PLAN_LINE = { swap: p => `两首叠 ${p.len} 小节，再换低音`, filter: () => 'B 慢慢变亮，A 慢慢变闷', echo: () => 'A 留个回声，B 直接进来' };
-  function renderPlans() {
+  function renderPlans(enter) {
     const ps = S.planset;
     if (!ps) return;
     const A = S.tracks.A, B = S.tracks.B;
@@ -512,21 +535,24 @@
     const pickId = ai ? ai.pick : ps.pickId, pick = ps.plans.find(p => p.id === pickId);
     if (!S.picked) S.picked = pickId;
     const pending = Coach.state === 'online' && !ai && !S.aiPlansFailed;
-    $('#verdict').textContent = ai ? ai.headline : pending ? 'Claude 正在看这两首歌…' : `这两首，用${pick.name}最顺。`;
-    const box = $('#plans');
+    $('#verdict').textContent = ai ? ai.headline : pending ? 'Claude 正在看这两首歌…' : (pick.tempoGap ? `两首速度差得多，用${pick.name}最稳。` : `这两首，用${pick.name}最顺。`);
+    const box = $('#plans'), hist = loadHist();
     box.innerHTML = '';
-    ps.plans.forEach(p => {
-      box.append(h('button', { class: 'plan', 'data-plan': p.id, onclick: () => paintPick(p.id) },
+    ps.plans.forEach((p, i) => {
+      const mine = hist.filter(x => x.p === p.id).map(x => x.s), best = mine.length ? Math.max(...mine) : null;
+      box.append(h('button', { class: 'plan' + (enter ? ' pre' : ''), style: `transition-delay:${enter ? i * 70 : 0}ms`, 'data-plan': p.id, onclick: () => paintPick(p.id) },
         planArt(p),
         h('span', { class: 'plan-head' },
           h('span', {}, h('span', { class: 'plan-name' }, p.name), h('span', { class: 'plan-line' }, PLAN_LINE[p.id](p))),
           h('span', { class: 'fit' }, h('b', {}, String(p.fit)), h('small', { class: p.id === pickId ? 'pick' : '' }, p.id === pickId ? (ai ? 'Claude 推荐' : '推荐') : '适合度'))),
         h('span', { class: 'plan-meta' },
           h('span', {}, `${p.len} 小节`),
-          h('span', { class: 'dots', 'aria-label': `难度 ${p.difficulty} / 3` }, ...[1, 2, 3].map(i => h('i', { class: i <= p.difficulty ? 'on' : '' })))),
+          h('span', { class: 'dots', 'aria-label': `难度 ${p.difficulty} / 3` }, ...[1, 2, 3].map(i => h('i', { class: i <= p.difficulty ? 'on' : '' }))),
+          best != null ? h('span', { class: 'best' }, `练过 ${mine.length} 次 · 最好 ${best}`) : null),
         h('span', { class: 'script', 'aria-label': '步骤', html: p.steps.map(st => st.actions.map(a => ins(a, true)).join('')).join('') })));
     });
     paintPick(S.picked);
+    if (enter) { const show = () => $$('.plan.pre', box).forEach(e => e.classList.remove('pre')); requestAnimationFrame(() => requestAnimationFrame(show)); setTimeout(show, 80); setTimeout(() => $$('.plan', box).forEach(e => { e.style.transitionDelay = ''; }), 700); }
     if (pending && !S.aiPlansAsked) {
       S.aiPlansAsked = true;
       const planset = ps;
@@ -696,6 +722,7 @@
     if (mode === 'demo') startSession();
     else if (fresh && mode === 'guide') toast('先照提示摆好，再按开始');
     updateStartBtn();
+    pill($('.seg'));
   }
   function updateStartBtn() {
     const b = $('#startBtn');
@@ -731,6 +758,7 @@
     if (s.bStartRel != null && s.bStartBy === 'demo') s.bStartBy = 'ai';
     toast('换你来了，开始计分');
     updateStartBtn();
+    pill($('.seg'));
   }
   function relNow() {
     const A = Engine.decks.A;
@@ -908,6 +936,7 @@
       if (ui.play._on !== d.playing) {
         ui.play._on = d.playing;
         ui.play.classList.toggle('on', d.playing);
+        ui.play.setAttribute('aria-pressed', d.playing);
         ui.play.innerHTML = (d.playing ? ICON.pause : ICON.play).replace('<svg', '<svg width="18" height="18"');
       }
       const other = Engine.decks[id === 'A' ? 'B' : 'A'];
@@ -971,6 +1000,24 @@
   }
 
   /* ================= view 4 · review ================= */
+  function countUp(el, to) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !to) { el.textContent = String(to); return; }
+    const t0 = performance.now(), dur = 900;
+    el.textContent = '0';
+    const step = now => {
+      const k = Math.min(1, (now - t0) / dur);
+      el.textContent = String(Math.round(to * (1 - Math.pow(1 - k, 4))));
+      if (k < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step); setTimeout(() => { el.textContent = String(to); }, dur + 400);
+  }
+  // every scored run of this plan as one line: the last point is this run
+  function sparkSVG(tries) {
+    if (tries.length < 2) return '';
+    const t = tries.slice(-12), w = 120, hh = 36, x = i => 4 + i * (w - 8) / (t.length - 1), y = v => hh - 4 - (v / 100) * (hh - 8);
+    const pts = t.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+    return `<svg viewBox="0 0 ${w} ${hh}" width="${w}" height="${hh}" role="img" aria-label="最近 ${t.length} 次的分数：${t.join('、')}"><polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity=".55"/><circle cx="${x(t.length - 1).toFixed(1)}" cy="${y(t[t.length - 1]).toFixed(1)}" r="3.5" fill="currentColor"/></svg>`;
+  }
   function renderReview() {
     const R = S.result;
     if (!R) return go('tracks');
@@ -979,7 +1026,8 @@
     const { plan: p, result: r } = R;
     const tries = R.tries || [r.total], best = tries.length > 1 ? Math.max(...tries.slice(0, -1)) : null;
     $('#reviewTitle').textContent = `${p.name} · 第 ${tries.length} 次`;
-    $('#scoreNum').textContent = String(r.total);
+    countUp($('#scoreNum'), r.total);
+    $('#scoreSpark').innerHTML = sparkSVG(tries);
     $('#scoreGrade').textContent = r.total >= 85 ? '可以上台了。' : r.total >= 70 ? '很接近了。' : r.total >= 50 ? '方向对了。' : '再来一次。';
     $('#scoreSub').textContent = [best != null ? (r.total > best ? `新纪录，之前最好 ${best}` : `最好 ${best}`) : '', S.lastDemo && S.lastDemo.plan === p ? `示范 ${S.lastDemo.score}` : ''].filter(Boolean).join(' · ');
     const mx = $('#metrics');
@@ -1055,7 +1103,21 @@
       const v = b.dataset.go;
       b.disabled = v === 'tracks' ? false : v === 'plans' ? !ready : v === 'practice' ? !(ready && S.plan) : !S.result;
       b.classList.toggle('on', v === S.view);
+      if (v === S.view) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
     });
+    pill($('nav.steps'));
+  }
+  /* the dark pill behind the current tab slides instead of jumping */
+  function pill(box) {
+    let p = box.querySelector('.pill');
+    if (!p) { p = h('i', { class: 'pill', 'aria-hidden': 'true' }); box.prepend(p); }
+    const on = box.querySelector('button.on');
+    if (!on || !on.offsetWidth) return;
+    const first = !p.style.width;
+    if (first) p.classList.add('still');
+    p.style.width = on.offsetWidth + 'px';
+    p.style.transform = `translateX(${on.offsetLeft}px)`;
+    if (first) requestAnimationFrame(() => requestAnimationFrame(() => p.classList.remove('still')));
   }
   function go(view) {
     if (view === S.view) { updateNav(); return; }
@@ -1075,12 +1137,13 @@
     requestAnimationFrame(() => requestAnimationFrame(shown)); setTimeout(shown, 80);
     updateNav();
     window.scrollTo({ top: 0 });
-    if (view === 'plans') { renderPlans(); askPanel($('#askPlans')); }
+    if (view === 'plans') { renderPlans(true); askPanel($('#askPlans')); }
     if (view === 'practice') {
       buildConsole();
       // whatever happened elsewhere (a finished run, a preview) the desk starts from the plan's opening state
       if (S.plan && S.mode !== 'free') primeDecks(); else { stopAll(); resetMixer(); }
       updateStartBtn();
+      pill($('.seg'));
       $('#sessionTitle').textContent = S.plan ? S.plan.name : '练习';
       lastCoachKey = '';
     }
@@ -1118,7 +1181,7 @@
 
   /* ---- the explainer: three steps on the first page, and the same three plus a control glossary in the help sheet ---- */
   const HOW = [
-    ['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg>', '放两首歌', '拖进卡片，或先用示例曲'],
+    ['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg>', '放两首歌', '拖进卡片，或从曲库里挑'],
     ['<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3.5l1.9 5.6 5.6 1.9-5.6 1.9L11 18.5l-1.9-5.6L3.5 11l5.6-1.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>', 'AI 出三种接法', '看谁更合适，先听一遍'],
     [() => ICON.knob(0.72), '跟着练，打分复盘', '照着图标拧，练完看哪步没到位'],
   ];
@@ -1146,6 +1209,86 @@
     if (S.preview) stopPreview();
     dlg.showModal();
     if (section === 'about') $('#help .about').scrollIntoView({ block: 'nearest' });
+  }
+
+  /* ---- the crate: six tracks written for the demo, plus the viewer's own files ---- */
+  const COVER = {
+    midnight: '<path d="M27 9a13.5 13.5 0 1 0 8 23.5A11.5 11.5 0 0 1 27 9z" fill="currentColor"/>',
+    neon: '<path d="M8 16c4.7-5 9.3 5 14 0s9.300-5 14 0M8 22c4.700-5 9.300 5 14 0s9.300-5 14 0M8 28c4.700-5 9.300 5 14 0s9.300-5 14 0"/>',
+    velvet: '<circle cx="22" cy="22" r="14"/><circle cx="22" cy="22" r="8.500"/><circle cx="22" cy="22" r="2.500" fill="currentColor"/>',
+    orbit: '<ellipse cx="22" cy="22" rx="15" ry="6.500" transform="rotate(-28 22 22)"/><circle cx="22" cy="22" r="4.500" fill="currentColor"/>',
+    glass: '<path d="M22 7l12 15-12 15-12-15zM10 22h24M22 7l-4 15 4 15 4-15z"/>',
+    bloom: '<circle cx="22" cy="14.500" r="5.500"/><circle cx="29.500" cy="22" r="5.500"/><circle cx="22" cy="29.500" r="5.500"/><circle cx="14.500" cy="22" r="5.500"/><circle cx="22" cy="22" r="2" fill="currentColor"/>',
+  };
+  const coverSVG = id => `<svg viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${COVER[id]}</svg>`;
+  let libDeck = 'A';
+  function openLibrary(id) {
+    libDeck = id;
+    const other = id === 'A' ? 'B' : 'A', mine = S.tracks[id], theirs = S.tracks[other], dlg = $('#library');
+    $('#libTitle').innerHTML = `<i class="dk lg dk-${id}">${id}</i>给 Deck ${id} 挑一首`;
+    const list = $('#libList');
+    list.innerHTML = '';
+    Synth.LIBRARY.forEach(L => {
+      const here = mine && mine.lib === L.id, there = theirs && theirs.lib === L.id;
+      let fit = null;
+      if (!there && theirs && theirs.status === 'ready') {
+        const me = { key: { num: L.num, letter: L.letter }, bpm: L.bpm };
+        fit = (id === 'A' ? Analysis.compat(me, theirs.an) : Analysis.compat(theirs.an, me)).overall;
+      }
+      list.append(h('button', { class: 'lib-row' + (here ? ' on' : ''), disabled: there, onclick: () => { dlg.close(); if (!here) loadLib(id, L.id); } },
+        h('span', { class: 'lib-cover', html: coverSVG(L.id) }),
+        h('span', { class: 'lib-main' }, h('b', {}, L.title), h('small', {}, `${L.genre} · ${L.mood}`)),
+        h('span', { class: 'lib-mini' }, `${L.bpm} BPM`, h('small', {}, there ? `已在 ${other}` : here ? '当前' : `${L.camelot} · ${L.key}`)),
+        h('span', { class: 'lib-fact' }, h('b', {}, String(L.bpm)), h('small', {}, 'BPM')),
+        h('span', { class: 'lib-fact' }, h('b', {}, L.camelot), h('small', {}, L.key)),
+        h('span', { class: 'lib-fact wide' }, h('b', {}, fmtTime(L.duration)), h('small', {}, '时长')),
+        h('span', { class: 'lib-state' }, there ? `已在 ${other}` : here ? '当前' : fit != null ? h('span', { class: 'lib-fit' + (fit >= 80 ? ' good' : '') }, h('b', {}, String(fit)), `和 ${other} 的契合度`) : '')));
+    });
+    if (S.preview) stopPreview();
+    dlg.showModal();
+  }
+
+  /* ---- listener settings: volume and appearance, remembered in this browser ---- */
+  const VOL = { v: 0.8, muted: false };
+  const VOL_ICON = l => `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.500v5h3.500l4.500 4v-13l-4.500 4z" fill="currentColor" stroke-width="1.500"/>${l === 0 ? '<path d="m16 9.500 5 5m0-5-5 5"/>' : l === 1 ? '<path d="M15.500 9.500a3.500 3.500 0 0 1 0 5"/>' : '<path d="M15.500 9.500a3.500 3.500 0 0 1 0 5M18 7a7 7 0 0 1 0 10"/>'}</svg>`;
+  function setVol(patch, silent) {
+    Object.assign(VOL, patch);
+    const eff = VOL.muted ? 0 : VOL.v;
+    Engine.setVolume(eff * eff);
+    const btn = $('#volBtn'), range = $('#volRange');
+    btn.innerHTML = VOL_ICON(eff === 0 ? 0 : eff < 0.5 ? 1 : 2);
+    btn.setAttribute('aria-pressed', VOL.muted);
+    btn.title = VOL.muted ? '取消静音（M）' : '静音（M）';
+    range.value = Math.round(VOL.v * 100);
+    range.style.setProperty('--p', (VOL.muted ? 0 : VOL.v * 100) + '%');
+    if (!silent) { try { localStorage.setItem('segue.vol', JSON.stringify(VOL)); } catch (e) { /* not kept */ } }
+  }
+  const THEMES = ['auto', 'light', 'dark'];
+  const THEME_ICON = {
+    auto: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg>',
+    light: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.600 5.600 7 7M17 17l1.400 1.400M5.600 18.400 7 17M17 7l1.400-1.400"/></svg>',
+    dark: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20 14.500A8.500 8.500 0 0 1 9.500 4 8.500 8.500 0 1 0 20 14.500z" fill="currentColor"/></svg>',
+  };
+  function setTheme(t, silent) {
+    if (t === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+    const btn = $('#themeBtn'), name = { auto: '跟随系统', light: '浅色', dark: '深色' }[t];
+    btn.dataset.theme = t;
+    btn.innerHTML = THEME_ICON[t];
+    btn.title = `外观：${name}`; btn.setAttribute('aria-label', `外观：${name}，点按切换`);
+    if (!silent) { try { localStorage.setItem('segue.theme', t); } catch (e) { /* not kept */ } toast(`外观：${name}`); }
+  }
+  function wireChrome() {
+    try { Object.assign(VOL, JSON.parse(localStorage.getItem('segue.vol')) || {}); } catch (e) { /* defaults */ }
+    setVol({}, true);
+    $('#volBtn').addEventListener('click', () => setVol({ muted: !VOL.muted }));
+    $('#volRange').addEventListener('input', e => setVol({ v: e.target.value / 100, muted: false }));
+    let th = 'auto';
+    try { th = localStorage.getItem('segue.theme') || 'auto'; } catch (e) { /* default */ }
+    setTheme(THEMES.includes(th) ? th : 'auto', true);
+    $('#themeBtn').addEventListener('click', () => setTheme(THEMES[(THEMES.indexOf($('#themeBtn').dataset.theme) + 1) % 3]));
+    $('#libClose').addEventListener('click', () => $('#library').close());
+    $('#library').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+    $('#libFile').addEventListener('change', e => { const f = e.target.files[0]; if (f) { $('#library').close(); loadFile(libDeck, f); } e.target.value = ''; });
   }
 
   /* ---- practice history, kept in this browser only ---- */
@@ -1191,8 +1334,12 @@
     // a click on the dimmed backdrop lands on the dialog element itself
     $('#help').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
     document.addEventListener('keydown', e => {
-      if (S.view !== 'practice' || $('#help').open || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.target.closest('input, textarea, [role="slider"]')) return;
+      if ($('#help').open || $('#library').open || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.target.closest('input, textarea')) return;
+      if (e.key === 'm' || e.key === 'M') { setVol({ muted: !VOL.muted }); return; }
+      if (e.key === '?') { openHelp(); return; }
+      if (S.view !== 'practice' || e.target.closest('[role="slider"]')) return;
+      if (e.key === 'Enter' && !e.target.closest('button, a')) { e.preventDefault(); $('#startBtn').click(); return; }
       // a button the keyboard landed on keeps its own Space; one that was just clicked does not
       if (e.target.closest('button, a') && e.target.matches(':focus-visible')) return;
       if (e.code === 'Space') { e.preventDefault(); playPressed('B'); }
@@ -1205,6 +1352,7 @@
       if (S.view === 'tracks') { trackCard('A'); trackCard('B'); }
       if (S.view === 'plans') renderPlans();
       if (S.view === 'review') drawCompare();
+      pill($('nav.steps')); pill($('.seg'));
     }, 150); });
     // canvases and inline SVG read colours once; repaint when the viewer's theme flips
     const onTheme = () => {
@@ -1217,7 +1365,9 @@
     new MutationObserver(onTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     Coach.onState(updateChip);
     Engine.context();
-    loadDemo('A'); loadDemo('B');
+    wireChrome();
+    loadDemo('A').catch(() => {}); loadDemo('B').catch(() => {});
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => pill($('nav.steps')));
     requestAnimationFrame(frame);
   }
   boot();

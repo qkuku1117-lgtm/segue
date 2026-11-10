@@ -4,13 +4,19 @@
  * channel faders, crossfader, limiter. Positions are tracked in track
  * seconds so tempo changes never lose the beat grid. */
 const Engine = (() => {
-  let ctx = null, masterIn, masterAn, echoDelay, echoFb;
+  let ctx = null, masterIn, masterAn, echoDelay, echoFb, outGain, volume = 1;
+  const MUTED = /[?&]mute\b/.test(location.search);
   const decks = {};
   const CTRL_DEFAULTS = { fader: 1, low: 0.5, mid: 0.5, high: 0.5, filter: 0, echo: 0 };
 
   function context() {
     if (!ctx) build();
     return ctx;
+  }
+  // the listener's volume: after the meters, so scoring and level displays never depend on it
+  function setVolume(v) {
+    volume = Math.max(0, Math.min(1, v));
+    if (outGain && !MUTED) outGain.gain.setTargetAtTime(volume, ctx.currentTime, 0.02);
   }
   function resume() { context(); if (ctx.state !== 'running') ctx.resume(); }
 
@@ -27,9 +33,9 @@ const Engine = (() => {
     lim.threshold.value = -4; lim.knee.value = 2; lim.ratio.value = 12; lim.attack.value = 0.002; lim.release.value = 0.12;
     masterAn = ctx.createAnalyser(); masterAn.fftSize = 2048;
     // ?mute keeps everything running (meters, scoring) but sends nothing to the speakers: for silent testing
-    const out = ctx.createGain();
-    out.gain.value = /[?&]mute\b/.test(location.search) ? 0 : 1;
-    masterIn.connect(lim).connect(masterAn).connect(out).connect(ctx.destination);
+    outGain = ctx.createGain();
+    outGain.gain.value = MUTED ? 0 : volume;
+    masterIn.connect(lim).connect(masterAn).connect(outGain).connect(ctx.destination);
     // echo bus: post-fader sends land here, the tail rings on after a fader cut
     const echoIn = ctx.createGain();
     echoDelay = ctx.createDelay(4); echoDelay.delayTime.value = 0.36;
@@ -211,7 +217,7 @@ const Engine = (() => {
   function spectrum(out) { masterAn.getByteFrequencyData(out); return out; }
 
   return {
-    context, resume, decks, CTRL_DEFAULTS, load, play, stop, seek, setTempo, setBend, setCtrl, setCrossfader,
+    context, resume, setVolume, decks, CTRL_DEFAULTS, load, play, stop, seek, setTempo, setBend, setCtrl, setCrossfader,
     playQuantized, sync, pos, rate, bpmNow, beatPos, phaseErrorMs, deckLowShare, deckLevel, meterLevel, spectrum,
     get now() { return ctx ? ctx.currentTime : 0; }, get analyser() { return masterAn; },
     ctxTimeOf, eqLin, eqDb, lpfHz, hpfHz,

@@ -459,6 +459,89 @@ kbd { display: inline-grid; place-items: center; min-width: 28px; height: 26px; 
   .loading .bars i, .ctl.active .knob, .ctl.active .vf, .tbtn.wanted { animation: none !important; }
   .coach-text.fade { filter: none; }
 }
+
+/* ---------- round 3: sliding pills, listener settings, the crate, richer controls ---------- */
+nav.steps, .seg { position: relative; }
+nav.steps .pill, .seg .pill { position: absolute; top: 3px; left: 0; height: calc(100% - 6px); border-radius: 999px; background: var(--text); pointer-events: none; transition: transform 340ms var(--ease-out), width 340ms var(--ease-out); }
+.pill.still { transition: none !important; }
+nav.steps button, .seg button { position: relative; z-index: 1; }
+nav.steps button.on, .seg button.on { background: transparent; color: var(--ink); }
+
+.top-r { gap: 8px; }
+.vol { display: flex; align-items: center; height: 36px; border-radius: 999px; background: var(--booth); }
+.vol input { -webkit-appearance: none; appearance: none; width: 0; height: 4px; margin: 0; padding: 0; opacity: 0; border-radius: 2px; background: linear-gradient(to right, var(--text) var(--p, 80%), var(--rail) 0); cursor: pointer; transition: width var(--dur-panel) var(--ease-out), margin var(--dur-panel) var(--ease-out), opacity var(--dur-ui) ease; }
+.vol input::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--text); border: 0; }
+.vol input::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--text); border: 0; }
+@media (hover: hover) and (pointer: fine) { .vol:hover input, .vol:focus-within input { width: 84px; margin: 0 2px 0 14px; opacity: 1; } }
+.vol .icon-btn[aria-pressed="true"] { color: var(--dim); }
+
+.track-acts { display: flex; gap: 8px; }
+.strip.sk { cursor: default; }
+.strip.sk i, .track-foot.sk i { background: var(--booth); animation: sk 1.4s ease-in-out infinite; }
+.strip.sk i { border-radius: 12px; }
+.strip.sk i:nth-child(2) { animation-delay: .1s } .strip.sk i:nth-child(3) { animation-delay: .2s } .strip.sk i:nth-child(4) { animation-delay: .3s } .strip.sk i:nth-child(5) { animation-delay: .4s } .strip.sk i:nth-child(6) { animation-delay: .5s }
+.sk-dot { flex: none; width: 44px; height: 44px; border-radius: 50%; }
+.sk-line { width: 88px; height: 12px; border-radius: 6px; }
+@keyframes sk { 50% { opacity: .45; } }
+.track > * { animation: card-in var(--dur-panel) var(--ease-out); }
+@keyframes card-in { from { opacity: 0; } }
+
+.sheet-head h2 { display: flex; align-items: center; gap: 12px; }
+.lib { display: grid; gap: 6px; margin-top: 4px; }
+.lib-row { display: grid; grid-template-columns: 52px minmax(0, 1fr) 52px 52px 52px minmax(92px, auto); align-items: center; gap: 14px; width: 100%; padding: 10px 16px 10px 10px; border-radius: 20px; background: var(--booth); text-align: left; transition: background-color var(--dur-ui) ease, transform var(--dur-press) var(--ease-out); }
+.lib-row:active:not(:disabled) { transform: scale(0.99); }
+.lib-row.on { box-shadow: inset 0 0 0 2px var(--text); }
+.lib-row:disabled { opacity: .45; cursor: default; }
+@media (hover: hover) and (pointer: fine) { .lib-row:hover:not(:disabled) { background: var(--booth-2); } }
+.lib-cover { width: 52px; height: 52px; border-radius: 14px; display: grid; place-items: center; background: var(--card); color: var(--text); }
+.lib-cover svg { width: 40px; height: 40px; display: block; }
+.lib-main b { display: block; font-family: var(--display); font-size: 17px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lib-main small, .lib-fact small { display: block; font-size: 12px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lib-fact b { display: block; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.lib-state { justify-self: end; text-align: right; font-size: 12px; color: var(--dim); white-space: nowrap; }
+.lib-fit b { display: block; font-size: 15px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+.lib-fit.good b { color: var(--coach-text); }
+.lib-up { margin-top: 6px; grid-template-columns: 52px minmax(0, 1fr); background: none; box-shadow: inset 0 0 0 1px var(--rail); cursor: pointer; }
+.lib-up .lib-cover { background: var(--booth); }
+.lib-up .lib-cover svg { width: 22px; height: 22px; }
+.lib-mini { display: none; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.lib-mini small { display: block; font-size: 12px; font-weight: 400; color: var(--dim); }
+@media (max-width: 620px) {
+  .lib-row { grid-template-columns: 52px minmax(0, 1fr) auto; gap: 12px; }
+  .lib-fact, .lib-row:not(.lib-up) .lib-state { display: none; }
+  .lib-mini { display: block; }
+  .lib-up { grid-template-columns: 52px minmax(0, 1fr); }
+  .sheet-in { padding: 18px 16px 24px; }
+  .sheet-head h2 { font-size: 22px; }
+}
+
+/* knobs carry their value as an arc; faders get a scale */
+.knob .trk { fill: none; stroke: var(--booth-2); stroke-width: 2.5; stroke-linecap: round; }
+.knob .val { fill: none; stroke: var(--text); stroke-width: 2.5; stroke-linecap: round; }
+.ctl.active .knob .val { stroke: var(--coach); }
+.knob .cap { transition: fill var(--dur-ui) ease; }
+.ctl.dragging .knob .cap { fill: var(--groove); }
+.vf::before { content: ""; position: absolute; left: 5px; right: 5px; top: 16px; bottom: 16px; pointer-events: none; opacity: .7; background: repeating-linear-gradient(to bottom, var(--groove) 0 1px, transparent 1px 12.5%) left / 5px calc(100% + 1px) no-repeat, repeating-linear-gradient(to bottom, var(--groove) 0 1px, transparent 1px 12.5%) right / 5px calc(100% + 1px) no-repeat; }
+.vf .cap, .hf .cap { box-shadow: 0 1px 0 rgba(0, 0, 0, .35), inset 0 0 0 1px rgba(255, 255, 255, .08); }
+.vf .cap::after { content: ""; position: absolute; left: 6px; right: 6px; top: 50%; height: 2px; margin-top: -1px; border-radius: 1px; background: var(--ink); opacity: .55; }
+.hf .cap::after { content: ""; position: absolute; top: 6px; bottom: 6px; left: 50%; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--ink); opacity: .55; }
+
+/* plans arrive one after another; the chosen one shows time moving through its picture */
+.plan { transition: transform var(--dur-press) var(--ease-out), box-shadow var(--dur-ui) ease, opacity 420ms var(--ease-out), translate 420ms var(--ease-out); }
+.plan.pre { opacity: 0; translate: 0 14px; transition: none; }
+.plan.on .art::after { content: ""; position: absolute; top: 8px; bottom: 8px; left: 12px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--text); opacity: .28; animation: art-sweep 5s linear infinite; }
+@keyframes art-sweep { from { left: 12px; } to { left: calc(100% - 12px); } }
+.plan-meta .best { margin-left: auto; font-weight: 500; color: var(--dim); }
+
+.score-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-height: 36px; }
+.spark { color: #f5f5f7; }
+.spark svg { display: block; }
+
+@media (max-width: 760px) { .top-r { gap: 4px; } .track-acts { gap: 6px; } .track-acts .icon-btn { width: 38px; height: 38px; } .track-title { font-size: 20px; } }
+@media (prefers-reduced-motion: reduce) {
+  .pill, .plan, .plan.pre { transition: none !important; translate: none !important; }
+  .plan.on .art::after, .strip.sk i, .track-foot.sk i, .track > * { animation: none !important; }
+}
 </style>
 
 <header class="top">
@@ -472,6 +555,8 @@ kbd { display: inline-grid; place-items: center; min-width: 28px; height: 26px; 
     </nav>
     <div class="top-r">
       <button class="ai-chip" id="aiChip" data-state="checking"><i></i><span>连接中</span></button>
+      <div class="vol" id="vol"><input type="range" id="volRange" min="0" max="100" value="80" aria-label="音量"><button class="icon-btn hd" id="volBtn" aria-label="静音" aria-pressed="false"></button></div>
+      <button class="icon-btn hd" id="themeBtn" aria-label="外观"></button>
       <button class="icon-btn hd" id="helpBtn" aria-label="怎么玩" title="怎么玩"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.2 9.2a2.9 2.9 0 0 1 5.6 1c0 2-2.8 2.4-2.8 4.3"/><circle cx="12" cy="18.3" r=".6" fill="currentColor"/></svg></button>
     </div>
   </div>
@@ -488,18 +573,36 @@ kbd { display: inline-grid; place-items: center; min-width: 28px; height: 26px; 
     <div class="gloss" id="gloss"></div>
     <h3>快捷键</h3>
     <div class="keys">
+      <span><kbd>Enter</kbd>开始 / 停止</span>
       <span><kbd>空格</kbd>B 播放 / 暂停</span>
       <span><kbd>S</kbd>B 同步到 A</span>
       <span><kbd>↑</kbd><kbd>↓</kbd>微调选中的旋钮</span>
+      <span><kbd>M</kbd>静音</span>
+      <span><kbd>?</kbd>打开这页</span>
       <span><kbd>Esc</kbd>关闭这页</span>
     </div>
     <h3>关于</h3>
     <ul class="about">
       <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 18V6M9 18v-8M14 18V9M19 18v-5"/></svg></span><span><b>规则引擎</b><small>测速度、找乐句、排方案、打分。每次结果都一样，离线也能用。</small></span></li>
       <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3.5l1.9 5.6 5.6 1.9-5.6 1.9L11 18.5l-1.9-5.6L3.5 11l5.6-1.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></span><span><b>Claude</b><small>在 claude.ai 里打开时，点评方案、写复盘、回答问题。不在线时由内置教练接手。</small></span></li>
-      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span><span><b>只在本机</b><small>歌曲在你的浏览器里解码和分析，不上传。</small></span></li>
+      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span><span><b>只在本机</b><small>歌曲在你的浏览器里解码和分析，不上传。曲库里的 6 首是浏览器现场合成的原创曲，自带调性标签；你上传的歌由分析器来测。</small></span></li>
     </ul>
     <p class="about-note">Segue 是一个 AI 产品作品集 Demo。</p>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="library" aria-labelledby="libTitle">
+  <div class="sheet-in">
+    <div class="sheet-head">
+      <h2 id="libTitle">曲库</h2>
+      <button class="icon-btn" id="libClose" aria-label="关闭"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="lib" id="libList"></div>
+    <label class="lib-row lib-up file-btn">
+      <span class="lib-cover"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg></span>
+      <span class="lib-main"><b>用自己的歌</b><small>MP3 · WAV · M4A，只在你的浏览器里分析</small></span>
+      <input type="file" id="libFile" accept="audio/*" aria-label="上传一首自己的歌">
+    </label>
   </div>
 </dialog>
 
@@ -511,7 +614,7 @@ kbd { display: inline-grid; place-items: center; min-width: 28px; height: 26px; 
       <h1 id="slogan">两首歌，无缝接上。</h1>
       <p class="lede" id="heroLede">放进两首歌，AI 给出三种接法，再一步一步带你练会。</p>
       <div class="hero-acts">
-        <button class="btn primary" id="heroDemo" disabled><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5.8v12.4l9.6-6.2z"/></svg>先听一遍示范</button>
+        <button class="btn primary" id="heroDemo" disabled><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5.8v12.4l9.6-6.2z"/></svg><span id="heroDemoTxt">正在准备歌曲…</span></button>
         <button class="btn link" id="heroHow">怎么玩</button>
       </div>
     </div>
@@ -528,7 +631,7 @@ kbd { display: inline-grid; place-items: center; min-width: 28px; height: 26px; 
     </div>
     <p class="footnote">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-      MP3 · WAV · M4A　歌只在你的浏览器里分析，不会上传
+      6 首原创示例曲，也可以拖进自己的歌　只在你的浏览器里分析，不会上传
     </p>
     <ol class="how" id="how" aria-label="三步"></ol>
   </section>
@@ -563,13 +666,13 @@ kbd { display: inline-grid; place-items: center; min-width: 28px; height: 26px; 
     </div>
     <p class="mobile-hint" id="mobileHint">练习台在电脑或横屏的平板上更好用<button aria-label="知道了" id="mobileHintX">知道了</button></p>
     <div class="island-wrap">
-      <div class="island" id="coachCard" role="status">
-        <div class="count" id="count"></div>
+      <div class="island" id="coachCard">
+        <div class="count" id="count" aria-hidden="true"></div>
         <div class="coach-text" id="coachText"><div class="what" id="coachWhat">按提示摆好台子</div></div>
         <button class="btn sm primary" id="startBtn">开始</button>
       </div>
       <div class="island-sub">
-        <span id="coachWhen">准备</span>
+        <span id="coachWhen" aria-live="polite">准备</span>
         <span id="coachWhy"></span>
         <span class="steptrack" id="stepDots" aria-hidden="true"></span>
         <span class="alerts" id="alerts"></span>
@@ -585,7 +688,7 @@ kbd { display: inline-grid; place-items: center; min-width: 28px; height: 26px; 
   <section class="view" id="view-review" hidden>
     <div class="bento">
       <section class="tile narrow score-tile">
-        <span class="eyebrow" id="reviewTitle">这次过渡</span>
+        <div class="score-top"><span class="eyebrow" id="reviewTitle">这次过渡</span><span class="spark" id="scoreSpark"></span></div>
         <div>
           <div class="score-num" id="scoreNum">0</div>
           <div class="score-grade" id="scoreGrade"></div>

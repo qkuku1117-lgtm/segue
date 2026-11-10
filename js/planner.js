@@ -91,6 +91,9 @@ const Planner = (() => {
       });
     }
     plans.forEach(normalize);
+    // a long overlap needs the two tempos close: past about 6% the pitch shift is audible, so the short hand-over wins
+    const gap = Math.abs(c.bpmPct);
+    if (gap > 6) plans.forEach(p => { p.fit = p.id === 'echo' ? Math.min(96, p.fit + 22) : Math.round(p.fit * 0.8); p.tempoGap = true; });
     const ranked = [...plans].sort((a, b) => b.fit - a.fit || a.difficulty - b.difficulty);
     ranked[0].pick = true;
     return { plans, compat: c, reasons: reasons(analA, analB, c, plans), pickId: ranked[0].id };
