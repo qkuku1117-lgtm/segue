@@ -771,6 +771,43 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
 .vinyl { touch-action: none; }
 .vinyl.held { cursor: grabbing; }
 .deck .vinyl, .track .vinyl { cursor: grab; }
+
+/* ---------- the song page without letters: records are "先放" and "后接" ---------- */
+.vh { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+#view-tracks { padding-top: 28px; }
+#view-plans .page-head { padding: 24px 4px 20px; }
+#view-plans .pairline { margin: 0; }
+.role { flex: none; align-self: flex-start; display: inline-grid; place-items: center; height: 28px; padding: 0 12px; border-radius: 999px; font-size: 12px; font-weight: 600; font-style: normal; white-space: nowrap; }
+.role-A { background: var(--text); color: var(--ink); }
+.role-B { color: var(--text); box-shadow: inset 0 0 0 1.5px var(--text); }
+.role.sm { height: 24px; padding: 0 9px; font-size: 11px; align-self: center; }
+.crate-cols, .crate-row { grid-template-columns: 52px minmax(0, 1fr) 56px 64px 56px 56px 48px; }
+#targetSeg button { min-width: 52px; padding: 0 14px; font-weight: 600; }
+
+/* ---------- first-visit walk-through ---------- */
+.tour { position: fixed; inset: 0; z-index: 70; transition: opacity 240ms ease; }
+.tour.out { opacity: 0; pointer-events: none; }
+.tour-shade { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); animation: fade-in 320ms ease; }
+.tour-ring { position: absolute; left: 0; top: 0; pointer-events: none; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92), 0 0 0 7px rgba(255, 255, 255, 0.16); animation: fade-in 320ms ease; }
+.tour.no-clip .tour-shade { display: none; }
+.tour.no-clip .tour-ring { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92), 0 0 0 200vmax rgba(0, 0, 0, 0.62); }
+.tour-card { position: absolute; left: 0; top: 0; width: 336px; max-width: calc(100vw - 24px); padding: 20px; border-radius: 26px; background: var(--card); color: var(--text); box-shadow: 0 0 0 1px var(--hairline), 0 28px 70px rgba(0, 0, 0, 0.36); transition: transform 360ms var(--ease-out); animation: fade-in 320ms ease; }
+.tour-card.still { transition: none; }
+.tour-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.tour-n { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; color: var(--coach-text); }
+.tour-skip { height: 32px; margin: -6px -8px -6px 0; padding: 0 10px; border-radius: 999px; font-size: 13px; color: var(--dim); }
+.tour-card h2 { margin: 0 0 6px; font-family: var(--display); font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+.tour-card p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--dim); }
+.tour-foot { display: flex; align-items: center; gap: 8px; margin-top: 18px; }
+.tour-dots { display: flex; gap: 6px; margin-right: auto; }
+.tour-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--rail); transition: background-color var(--dur-ui) ease, width var(--dur-ui) var(--ease-out); }
+.tour-dots i.on { width: 18px; border-radius: 3px; background: var(--text); }
+.tour-foot .btn.sm { height: 40px; padding: 0 18px; }
+#tourAgain { margin-top: 10px; }
+@media not ((hover: hover) and (pointer: fine)) { .mouse-only { display: none; } }
+@media (hover: hover) and (pointer: fine) { .tour-skip:hover { background: var(--booth-2); color: var(--text); } }
+@media (prefers-reduced-transparency: reduce) { .tour-shade { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(0, 0, 0, 0.7); } }
+@media (prefers-reduced-motion: reduce) { .tour, .tour-card { transition: none; } .tour-shade, .tour-ring, .tour-card { animation: none; } }
 </style>
 
 <header class="top">
@@ -798,6 +835,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
       <button class="icon-btn" id="helpClose" aria-label="关闭"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
     <ol class="how in-sheet" aria-label="三步"></ol>
+    <button class="btn sm quiet" id="tourAgain">再看一遍引导</button>
     <h3>控件</h3>
     <div class="gloss" id="gloss"></div>
     <h3>快捷键</h3>
@@ -823,19 +861,13 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
 <main class="wrap">
   <!-- 1 · tracks: the pair on the left, the crate on the right -->
   <section class="view" id="view-tracks">
-    <div class="page-head">
-      <div>
-        <p class="eyebrow">AI 混音教练</p>
-        <h1 id="slogan">两首歌，无缝接上。</h1>
-      </div>
-      <p class="lede" id="heroLede">挑两首歌，AI 教你接上。</p>
-    </div>
+    <h1 class="vh">选歌</h1>
     <div class="cols">
       <div class="tray pair" aria-label="这一对">
         <article class="track" data-deck="A" id="trackA"></article>
         <div class="seam-row">
           <aside class="compat" id="compat" aria-label="两首歌的契合度"></aside>
-          <button class="swap-btn" id="swapBtn" disabled aria-label="对调 A 和 B" title="对调 A 和 B"><span><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4v15m0 0-4-4m4 4 4-4M16 20V5m0 0-4 4m4-4 4 4"/></svg></span></button>
+          <button class="swap-btn" id="swapBtn" disabled aria-label="对调两首歌" title="对调两首歌"><span><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4v15m0 0-4-4m4 4 4-4M16 20V5m0 0-4 4m4-4 4 4"/></svg></span></button>
         </div>
         <article class="track" data-deck="B" id="trackB"></article>
         <div class="pair-acts">
@@ -845,7 +877,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
       </div>
       <section class="crate" id="crate" aria-label="曲库">
         <div class="crate-head">
-          <div><h2>曲库</h2><span class="crate-pick">点一首放到<span class="seg" id="targetSeg" role="group" aria-label="放到哪一台"><button data-t="A" class="on">A</button><button data-t="B">B</button></span>或拖到唱片上</span></div>
+          <div><h2>曲库</h2><span class="crate-pick">点一首放到<span class="seg" id="targetSeg" role="group" aria-label="换哪一张唱片"><button data-t="A" class="on">先放</button><button data-t="B">后接</button></span><span class="mouse-only">或拖到唱片上</span></span></div>
           <label class="btn sm quiet file-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>上传<input type="file" id="crateFile" accept="audio/*" multiple aria-label="上传自己的歌"></label>
         </div>
         <div class="crate-scroll">
@@ -865,7 +897,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
   <!-- 2 · plans: one score shows how the two songs meet -->
   <section class="view" id="view-plans" hidden>
     <div class="page-head">
-      <h1>选一种接法。</h1>
+      <h1 class="vh">接法</h1>
       <p class="pairline" id="pairLine"></p>
     </div>
     <div class="tray">

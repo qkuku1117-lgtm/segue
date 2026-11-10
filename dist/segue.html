@@ -776,6 +776,43 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
 .vinyl { touch-action: none; }
 .vinyl.held { cursor: grabbing; }
 .deck .vinyl, .track .vinyl { cursor: grab; }
+
+/* ---------- the song page without letters: records are "先放" and "后接" ---------- */
+.vh { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+#view-tracks { padding-top: 28px; }
+#view-plans .page-head { padding: 24px 4px 20px; }
+#view-plans .pairline { margin: 0; }
+.role { flex: none; align-self: flex-start; display: inline-grid; place-items: center; height: 28px; padding: 0 12px; border-radius: 999px; font-size: 12px; font-weight: 600; font-style: normal; white-space: nowrap; }
+.role-A { background: var(--text); color: var(--ink); }
+.role-B { color: var(--text); box-shadow: inset 0 0 0 1.5px var(--text); }
+.role.sm { height: 24px; padding: 0 9px; font-size: 11px; align-self: center; }
+.crate-cols, .crate-row { grid-template-columns: 52px minmax(0, 1fr) 56px 64px 56px 56px 48px; }
+#targetSeg button { min-width: 52px; padding: 0 14px; font-weight: 600; }
+
+/* ---------- first-visit walk-through ---------- */
+.tour { position: fixed; inset: 0; z-index: 70; transition: opacity 240ms ease; }
+.tour.out { opacity: 0; pointer-events: none; }
+.tour-shade { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); animation: fade-in 320ms ease; }
+.tour-ring { position: absolute; left: 0; top: 0; pointer-events: none; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92), 0 0 0 7px rgba(255, 255, 255, 0.16); animation: fade-in 320ms ease; }
+.tour.no-clip .tour-shade { display: none; }
+.tour.no-clip .tour-ring { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.92), 0 0 0 200vmax rgba(0, 0, 0, 0.62); }
+.tour-card { position: absolute; left: 0; top: 0; width: 336px; max-width: calc(100vw - 24px); padding: 20px; border-radius: 26px; background: var(--card); color: var(--text); box-shadow: 0 0 0 1px var(--hairline), 0 28px 70px rgba(0, 0, 0, 0.36); transition: transform 360ms var(--ease-out); animation: fade-in 320ms ease; }
+.tour-card.still { transition: none; }
+.tour-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.tour-n { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; color: var(--coach-text); }
+.tour-skip { height: 32px; margin: -6px -8px -6px 0; padding: 0 10px; border-radius: 999px; font-size: 13px; color: var(--dim); }
+.tour-card h2 { margin: 0 0 6px; font-family: var(--display); font-size: 24px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.2; }
+.tour-card p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--dim); }
+.tour-foot { display: flex; align-items: center; gap: 8px; margin-top: 18px; }
+.tour-dots { display: flex; gap: 6px; margin-right: auto; }
+.tour-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--rail); transition: background-color var(--dur-ui) ease, width var(--dur-ui) var(--ease-out); }
+.tour-dots i.on { width: 18px; border-radius: 3px; background: var(--text); }
+.tour-foot .btn.sm { height: 40px; padding: 0 18px; }
+#tourAgain { margin-top: 10px; }
+@media not ((hover: hover) and (pointer: fine)) { .mouse-only { display: none; } }
+@media (hover: hover) and (pointer: fine) { .tour-skip:hover { background: var(--booth-2); color: var(--text); } }
+@media (prefers-reduced-transparency: reduce) { .tour-shade { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(0, 0, 0, 0.7); } }
+@media (prefers-reduced-motion: reduce) { .tour, .tour-card { transition: none; } .tour-shade, .tour-ring, .tour-card { animation: none; } }
 </style>
 
 </head>
@@ -805,6 +842,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
       <button class="icon-btn" id="helpClose" aria-label="关闭"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
     <ol class="how in-sheet" aria-label="三步"></ol>
+    <button class="btn sm quiet" id="tourAgain">再看一遍引导</button>
     <h3>控件</h3>
     <div class="gloss" id="gloss"></div>
     <h3>快捷键</h3>
@@ -830,19 +868,13 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
 <main class="wrap">
   <!-- 1 · tracks: the pair on the left, the crate on the right -->
   <section class="view" id="view-tracks">
-    <div class="page-head">
-      <div>
-        <p class="eyebrow">AI 混音教练</p>
-        <h1 id="slogan">两首歌，无缝接上。</h1>
-      </div>
-      <p class="lede" id="heroLede">挑两首歌，AI 教你接上。</p>
-    </div>
+    <h1 class="vh">选歌</h1>
     <div class="cols">
       <div class="tray pair" aria-label="这一对">
         <article class="track" data-deck="A" id="trackA"></article>
         <div class="seam-row">
           <aside class="compat" id="compat" aria-label="两首歌的契合度"></aside>
-          <button class="swap-btn" id="swapBtn" disabled aria-label="对调 A 和 B" title="对调 A 和 B"><span><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4v15m0 0-4-4m4 4 4-4M16 20V5m0 0-4 4m4-4 4 4"/></svg></span></button>
+          <button class="swap-btn" id="swapBtn" disabled aria-label="对调两首歌" title="对调两首歌"><span><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4v15m0 0-4-4m4 4 4-4M16 20V5m0 0-4 4m4-4 4 4"/></svg></span></button>
         </div>
         <article class="track" data-deck="B" id="trackB"></article>
         <div class="pair-acts">
@@ -852,7 +884,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
       </div>
       <section class="crate" id="crate" aria-label="曲库">
         <div class="crate-head">
-          <div><h2>曲库</h2><span class="crate-pick">点一首放到<span class="seg" id="targetSeg" role="group" aria-label="放到哪一台"><button data-t="A" class="on">A</button><button data-t="B">B</button></span>或拖到唱片上</span></div>
+          <div><h2>曲库</h2><span class="crate-pick">点一首放到<span class="seg" id="targetSeg" role="group" aria-label="换哪一张唱片"><button data-t="A" class="on">先放</button><button data-t="B">后接</button></span><span class="mouse-only">或拖到唱片上</span></span></div>
           <label class="btn sm quiet file-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>上传<input type="file" id="crateFile" accept="audio/*" multiple aria-label="上传自己的歌"></label>
         </div>
         <div class="crate-scroll">
@@ -872,7 +904,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
   <!-- 2 · plans: one score shows how the two songs meet -->
   <section class="view" id="view-plans" hidden>
     <div class="page-head">
-      <h1>选一种接法。</h1>
+      <h1 class="vh">接法</h1>
       <p class="pairline" id="pairLine"></p>
     </div>
     <div class="tray">
@@ -2470,9 +2502,9 @@ const Coach = (() => {
 
   /* A record with its tonearm is each deck's play control: the label carries the deck letter and turns at 33⅓ rpm
      with the audio, and the arm sits on the groove the song has reached. */
-  function vinyl(id, o, label) {
+  function vinyl(id, o, label, plain) {
     const el = h('button', { class: `vinyl vy-${id}`, 'aria-label': label, title: label, disabled: !o },
-      h('span', { class: 'disc' }, h('span', { class: 'lbl' }, id)), h('span', { class: 'arm', 'aria-hidden': 'true' }, h('i')));
+      h('span', { class: 'disc' }, h('span', { class: 'lbl' }, plain ? '' : id)), h('span', { class: 'arm', 'aria-hidden': 'true' }, h('i')));
     if (!o) return el;
     // a short press is a tap; anything that turns the record more than a few degrees is a hand on the platter
     let g = null;
@@ -2513,6 +2545,9 @@ const Coach = (() => {
   }
 
   /* ================= view 1 · tracks ================= */
+  // on this page the two records are named by their part in the mix: the one playing first, the one coming in
+  const ROLE = { A: '先放', B: '后接' };
+  const roleTag = (d, sm) => h('i', { class: `role role-${d}` + (sm ? ' sm' : '') }, ROLE[d]);
   function trackCard(id) {
     const card = $('#track' + id), t = S.tracks[id];
     card.innerHTML = '';
@@ -2532,11 +2567,11 @@ const Coach = (() => {
           S.scrub = null;
           if (sc && S.preview === id) Engine.seek(Engine.decks[id], sc.t);
         },
-      } : null, `试听 ${id}`),
+      } : null, `试听${t && t.title ? ' ' + t.title : ''}`, true),
       h('div', { class: 'track-info' },
         h('div', { class: 'track-title' }, t && t.title ? t.title : '还没有歌'),
         h('div', { class: 'track-sub' }, ready ? `${an.bpm} BPM · ${an.key.name} · ${an.key.camelot}${t.lib ? ' · ' + libOf(t.lib).genre : ''}` : t ? t.step || '准备中' : '从曲库里挑一首')),
-      ));
+      roleTag(id)));
     if (!ready) {
       if (t && t.error) card.append(h('div', { class: 'loading' }, h('div', { class: 'track-err' }, h('span', {}, t.error), h('button', { class: 'btn sm quiet', onclick: () => loadDemo(id) }, '先用示例曲'))));
       // the loading card has the shape of the finished one, so nothing jumps when the song arrives
@@ -2588,20 +2623,20 @@ const Coach = (() => {
       let fit = '—', good = false;
       if (!here.A && A && A.status === 'ready' && r.cmp) { const v = Analysis.compat(A.an, r.cmp).overall; fit = String(v); good = v >= 80; }
       const where = here.A ? 'A' : here.B ? 'B' : null;
-      const row = h('button', { class: 'crate-row' + (where ? ' on' : ''), 'aria-label': `${r.title}${where ? `，已在 ${where}` : ''}`, onclick: () => { if (row._dragged) { row._dragged = false; return; } assign(S.target, r); } },
+      const row = h('button', { class: 'crate-row' + (where ? ' on' : ''), 'aria-label': `${r.title}${where ? `，${ROLE[where]}` : ''}`, onclick: () => { if (row._dragged) { row._dragged = false; return; } assign(S.target, r); } },
         h('span', { class: 'lib-cover', html: r.cover }),
         h('span', { class: 'lib-main' }, h('b', {}, r.title), h('small', {}, r.meta)),
         h('span', { class: 'c-num' }, String(r.bpm)),
         h('span', { class: 'c-key' }, h('b', {}, r.cam), h('small', {}, r.key)),
         h('span', { class: 'c-dur' }, r.dur ? fmtTime(r.dur) : '—'),
         h('span', { class: 'c-fit' + (good ? ' good' : '') }, fit),
-        h('span', { class: 'c-on' }, where ? h('i', { class: `dk dk-${where}` }, where) : null));
+        h('span', { class: 'c-on' }, where ? roleTag(where, true) : null));
       dragRow(row, r);
       box.append(row);
     });
     paintTarget();
   }
-  // the deck a tapped song goes to; tapping a deck card or the A/B switch changes it
+  // the record a tapped song goes to; tapping a card or the switch in the crate header changes it
   function setTarget(d) { S.target = d; paintTarget(); }
   function paintTarget() {
     ['A', 'B'].forEach(d => { $('#track' + d).classList.toggle('target', S.target === d); const b = $(`#targetSeg [data-t="${d}"]`); b.classList.toggle('on', S.target === d); b.setAttribute('aria-pressed', S.target === d); });
@@ -2681,7 +2716,7 @@ const Coach = (() => {
         h('div', { class: 'score' }, h('b', {}, String(c.overall)), h('span', {}, '契合度'))),
       h('span', { class: 'sep' }),
       h('div', { class: 'fact' }, h('b', {}, `${A.an.key.camelot} → ${B.an.key.camelot}`), h('small', { class: keyCls }, c.rel)),
-      h('div', { class: 'fact', title: `变速带来 ${c.semis >= 0 ? '+' : ''}${c.semis.toFixed(2)} 半音的音高变化` }, h('b', {}, `${A.an.bpm} → ${B.an.bpm}`), h('small', { class: bpmCls }, `B ${c.bpmPct >= 0 ? '加快' : '放慢'} ${Math.abs(c.bpmPct).toFixed(1)}%`)));
+      h('div', { class: 'fact', title: `变速带来 ${c.semis >= 0 ? '+' : ''}${c.semis.toFixed(2)} 半音的音高变化` }, h('b', {}, `${A.an.bpm} → ${B.an.bpm}`), h('small', { class: bpmCls }, `后一首${c.bpmPct >= 0 ? '加快' : '放慢'} ${Math.abs(c.bpmPct).toFixed(1)}%`)));
   }
 
   // twelve hours of the Camelot wheel as dots; the two songs are the large ones
@@ -3728,6 +3763,125 @@ const Coach = (() => {
     return all.filter(x => x.p === planId).map(x => x.s);
   }
 
+  /* ---- first visit: a short walk through the first page. Each step is pinned to the thing it is about,
+     the rest of the page is dimmed and blurred. As many steps as there are things to point at, no more. ---- */
+  const TOUR_KEY = 'segue.tour.v1';
+  const TOUR = [
+    { at: ['#trackA', '#trackB'], side: 'right', t: '两张唱片', d: '上面的先放，下面的接上去。点唱片试听，转动它找位置。' },
+    { at: ['#crate'], side: 'left', t: '换歌', d: FINE ? '先点选一张唱片，再点曲库里的一首；也可以直接拖到唱片上。' : '先点选一张唱片，再点曲库里的一首。' },
+    { at: ['.seam-row'], side: 'right', t: '搭不搭', d: '分数越高越好接。右边的按钮把两首对调。' },
+    { at: ['.pair-acts'], side: 'right', t: '看接法', d: 'AI 给出三种接法，选一种跟着练。想再看这段引导，点右上角的问号。' },
+  ];
+  const Tour = { on: false, i: 0 };
+  const tourSeen = () => { try { return !!localStorage.getItem(TOUR_KEY); } catch (e) { return false; } };
+  function tourRect(step) {
+    const els = step.at.map(s => $(s)).filter(Boolean);
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    els.forEach(el => { const b = el.getBoundingClientRect(); x0 = Math.min(x0, b.left); y0 = Math.min(y0, b.top); x1 = Math.max(x1, b.right); y1 = Math.max(y1, b.bottom); });
+    const pad = 6, x = Math.max(4, x0 - pad), y = Math.max(4, y0 - pad), w = Math.min(innerWidth - 4, x1 + pad) - x, hh = Math.min(innerHeight - 4, y1 + pad) - y;
+    return { x, y, w, h: hh, r: Math.min((parseFloat(getComputedStyle(els[0]).borderTopLeftRadius) || 12) + pad, w / 2, hh / 2) };
+  }
+  // the shade is one sheet with a rounded hole cut where the thing is
+  function tourPaint(r) {
+    const T = Tour, f = n => n.toFixed(1), q = f(r.r);
+    const hole = `M${f(r.x + r.r)} ${f(r.y)}h${f(r.w - 2 * r.r)}a${q} ${q} 0 0 1 ${q} ${q}v${f(r.h - 2 * r.r)}a${q} ${q} 0 0 1 -${q} ${q}h${f(2 * r.r - r.w)}a${q} ${q} 0 0 1 -${q} -${q}v${f(2 * r.r - r.h)}a${q} ${q} 0 0 1 ${q} -${q}z`;
+    const cp = `path(evenodd, "M0 0h${innerWidth}v${innerHeight}h${-innerWidth}z${hole}")`;
+    T.shade.style.webkitClipPath = cp; T.shade.style.clipPath = cp;
+    Object.assign(T.ring.style, { transform: `translate(${f(r.x)}px, ${f(r.y)}px)`, width: f(r.w) + 'px', height: f(r.h) + 'px', borderRadius: q + 'px' });
+  }
+  // the card sits beside the thing where there is room, otherwise at the far end of the screen
+  function tourCard(r, side) {
+    const c = Tour.card, vw = innerWidth, vh = innerHeight, m = 12, gap = 16, cw = c.offsetWidth, ch = c.offsetHeight;
+    const fits = { right: vw - (r.x + r.w) - gap - m >= cw, left: r.x - gap - m >= cw, bottom: vh - (r.y + r.h) - gap - m >= ch, top: r.y - gap - m >= ch };
+    const s = [side, 'right', 'left', 'bottom', 'top'].find(k => fits[k]);
+    let x, y;
+    if (s === 'right' || s === 'left') { x = s === 'right' ? r.x + r.w + gap : r.x - gap - cw; y = r.h > ch + 48 ? r.y + 24 : r.y + (r.h - ch) / 2; }
+    else if (s) { x = r.x + (r.w - cw) / 2; y = s === 'bottom' ? r.y + r.h + gap : r.y - gap - ch; }
+    // no room beside it: under a thing that fills the screen (its top is what matters), else at the far end
+    else { x = (vw - cw) / 2; y = r.h > vh * 0.55 || r.y + r.h / 2 < vh / 2 ? vh - ch - m : 76; }
+    c.style.transform = `translate(${Math.round(clamp(x, m, Math.max(m, vw - cw - m)))}px, ${Math.round(clamp(y, m, Math.max(m, vh - ch - m)))}px)`;
+  }
+  function tourShow(i, still) {
+    const T = Tour, step = TOUR[i], n = TOUR.length;
+    T.i = i; T.shownAt = performance.now();
+    // bring the thing into view first, then measure it
+    const els = step.at.map(s => $(s)), top = els[0].getBoundingClientRect().top, bottom = els[els.length - 1].getBoundingClientRect().bottom, head = 76, vh = innerHeight;
+    if (top < head || bottom > vh - 12) window.scrollBy({ top: bottom - top > vh - head - 24 ? top - head : (top + bottom) / 2 - (vh + head) / 2, behavior: 'instant' });
+    T.n.textContent = `${i + 1} / ${n}`;
+    T.t.textContent = step.t; T.d.textContent = step.d;
+    T.prev.style.display = i ? '' : 'none';
+    T.next.textContent = i === n - 1 ? '开始' : '下一步';
+    [...T.dots.children].forEach((d, k) => d.classList.toggle('on', k === i));
+    const to = tourRect(step), from = still || !T.rect ? to : T.rect;
+    tourCard(to, step.side);
+    const dur = still || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 360, t0 = performance.now();
+    cancelAnimationFrame(T.raf); clearTimeout(T.tm);
+    const run = () => {
+      const k = dur ? clamp((performance.now() - t0) / dur) : 1, e = 1 - Math.pow(1 - k, 4), mix = key => from[key] + (to[key] - from[key]) * e;
+      T.rect = { x: mix('x'), y: mix('y'), w: mix('w'), h: mix('h'), r: mix('r') };
+      tourPaint(T.rect);
+      if (k < 1) T.raf = requestAnimationFrame(run);
+    };
+    run();
+    // a throttled page gets no frames: land on the target anyway
+    T.tm = setTimeout(() => { cancelAnimationFrame(T.raf); T.rect = to; tourPaint(to); }, dur + 80);
+  }
+  function startTour() {
+    const T = Tour;
+    if (T.on || S.view !== 'tracks' || $('#help').open) return;
+    if (S.preview) stopPreview();
+    T.shade = h('div', { class: 'tour-shade' }); T.ring = h('div', { class: 'tour-ring' });
+    T.n = h('span', { class: 'tour-n' }); T.t = h('h2', { id: 'tourT' }); T.d = h('p', { id: 'tourD' });
+    T.dots = h('span', { class: 'tour-dots', 'aria-hidden': 'true' }, TOUR.map(() => h('i')));
+    T.prev = h('button', { class: 'btn sm quiet', onclick: () => tourShow(T.i - 1) }, '上一步');
+    T.next = h('button', { class: 'btn sm primary', onclick: () => { if (T.i < TOUR.length - 1) tourShow(T.i + 1); else endTour(); } }, '下一步');
+    T.card = h('div', { class: 'tour-card still', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'tourT', 'aria-describedby': 'tourD' },
+      h('div', { class: 'tour-top' }, T.n, h('button', { class: 'tour-skip', onclick: endTour }, '跳过')),
+      T.t, T.d, h('div', { class: 'tour-foot' }, T.dots, T.prev, T.next));
+    T.el = h('div', { class: 'tour' }, T.shade, T.ring, T.card);
+    if (!(window.CSS && CSS.supports('clip-path', 'path("M0 0h1v1z")'))) T.el.classList.add('no-clip');
+    T.inert = [...document.body.children].filter(el => !/^(SCRIPT|STYLE)$/.test(el.tagName));
+    T.inert.forEach(el => { el.inert = true; });
+    document.body.append(T.el);
+    T.on = true; T.rect = null;
+    T.key = e => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); endTour(); }
+      else if (e.key === 'ArrowRight') T.next.click();
+      else if (e.key === 'ArrowLeft') { if (T.i > 0) tourShow(T.i - 1); }
+      else if (e.key === 'Tab') {
+        const f = [...T.card.querySelectorAll('button')].filter(b => b.style.display !== 'none');
+        e.preventDefault(); f[(f.indexOf(document.activeElement) + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus();
+      }
+    };
+    // the page moved under the card (a resize, a rotated phone): measure again, no glide
+    T.fix = () => {
+      if (!T.on || performance.now() - T.shownAt < 450) return;
+      cancelAnimationFrame(T.raf); clearTimeout(T.tm);
+      T.rect = tourRect(TOUR[T.i]); tourPaint(T.rect); tourCard(T.rect, TOUR[T.i].side);
+    };
+    document.addEventListener('keydown', T.key, true);
+    window.addEventListener('resize', T.fix); window.addEventListener('scroll', T.fix, { passive: true });
+    T.el.addEventListener('wheel', e => e.preventDefault(), { passive: false });
+    T.el.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+    tourShow(0, true);
+    T.next.focus({ preventScroll: true });
+    const free = () => T.card.classList.remove('still');
+    requestAnimationFrame(() => requestAnimationFrame(free)); setTimeout(free, 120);
+  }
+  function endTour() {
+    const T = Tour;
+    if (!T.on) return;
+    T.on = false;
+    try { localStorage.setItem(TOUR_KEY, '1'); } catch (e) { /* shown again next time */ }
+    cancelAnimationFrame(T.raf); clearTimeout(T.tm);
+    document.removeEventListener('keydown', T.key, true);
+    window.removeEventListener('resize', T.fix); window.removeEventListener('scroll', T.fix);
+    T.inert.forEach(el => { el.inert = false; });
+    const el = T.el;
+    el.classList.add('out'); setTimeout(() => el.remove(), 260);
+    window.scrollTo({ top: 0 });
+  }
+
   function boot() {
     readColors();
     trackCard('A'); trackCard('B'); renderCompat();
@@ -3756,10 +3910,11 @@ const Coach = (() => {
     $('#helpBtn').addEventListener('click', openHelp);
     $('#footHelp').addEventListener('click', openHelp);
     $('#helpClose').addEventListener('click', () => $('#help').close());
+    $('#tourAgain').addEventListener('click', () => { $('#help').close(); go('tracks'); setTimeout(startTour, 120); });
     // a click on the dimmed backdrop lands on the dialog element itself
     $('#help').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
     document.addEventListener('keydown', e => {
-      if ($('#help').open || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (Tour.on || $('#help').open || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.target.closest('input, textarea')) return;
       if (e.key === 'm' || e.key === 'M') { setVol({ muted: !VOL.muted }); return; }
       if (e.key === '?') { openHelp(); return; }
@@ -3791,7 +3946,8 @@ const Coach = (() => {
     Coach.onState(updateChip);
     Engine.context();
     wireChrome();
-    loadDemo('A').catch(() => {}); loadDemo('B').catch(() => {});
+    // the walk-through waits for both records, so every step has something real to point at
+    Promise.allSettled([loadDemo('A'), loadDemo('B')]).then(() => { if (!tourSeen() || /[?&]tour\b/.test(location.search)) setTimeout(startTour, 300); });
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => pill($('nav.steps')));
     requestAnimationFrame(frame);
     // a covered or throttled page stops getting animation frames while the audio plays on: keep the clock moving

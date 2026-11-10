@@ -270,9 +270,9 @@
 
   /* A record with its tonearm is each deck's play control: the label carries the deck letter and turns at 33⅓ rpm
      with the audio, and the arm sits on the groove the song has reached. */
-  function vinyl(id, o, label) {
+  function vinyl(id, o, label, plain) {
     const el = h('button', { class: `vinyl vy-${id}`, 'aria-label': label, title: label, disabled: !o },
-      h('span', { class: 'disc' }, h('span', { class: 'lbl' }, id)), h('span', { class: 'arm', 'aria-hidden': 'true' }, h('i')));
+      h('span', { class: 'disc' }, h('span', { class: 'lbl' }, plain ? '' : id)), h('span', { class: 'arm', 'aria-hidden': 'true' }, h('i')));
     if (!o) return el;
     // a short press is a tap; anything that turns the record more than a few degrees is a hand on the platter
     let g = null;
@@ -313,6 +313,9 @@
   }
 
   /* ================= view 1 · tracks ================= */
+  // on this page the two records are named by their part in the mix: the one playing first, the one coming in
+  const ROLE = { A: '先放', B: '后接' };
+  const roleTag = (d, sm) => h('i', { class: `role role-${d}` + (sm ? ' sm' : '') }, ROLE[d]);
   function trackCard(id) {
     const card = $('#track' + id), t = S.tracks[id];
     card.innerHTML = '';
@@ -332,11 +335,11 @@
           S.scrub = null;
           if (sc && S.preview === id) Engine.seek(Engine.decks[id], sc.t);
         },
-      } : null, `试听 ${id}`),
+      } : null, `试听${t && t.title ? ' ' + t.title : ''}`, true),
       h('div', { class: 'track-info' },
         h('div', { class: 'track-title' }, t && t.title ? t.title : '还没有歌'),
         h('div', { class: 'track-sub' }, ready ? `${an.bpm} BPM · ${an.key.name} · ${an.key.camelot}${t.lib ? ' · ' + libOf(t.lib).genre : ''}` : t ? t.step || '准备中' : '从曲库里挑一首')),
-      ));
+      roleTag(id)));
     if (!ready) {
       if (t && t.error) card.append(h('div', { class: 'loading' }, h('div', { class: 'track-err' }, h('span', {}, t.error), h('button', { class: 'btn sm quiet', onclick: () => loadDemo(id) }, '先用示例曲'))));
       // the loading card has the shape of the finished one, so nothing jumps when the song arrives
@@ -388,20 +391,20 @@
       let fit = '—', good = false;
       if (!here.A && A && A.status === 'ready' && r.cmp) { const v = Analysis.compat(A.an, r.cmp).overall; fit = String(v); good = v >= 80; }
       const where = here.A ? 'A' : here.B ? 'B' : null;
-      const row = h('button', { class: 'crate-row' + (where ? ' on' : ''), 'aria-label': `${r.title}${where ? `，已在 ${where}` : ''}`, onclick: () => { if (row._dragged) { row._dragged = false; return; } assign(S.target, r); } },
+      const row = h('button', { class: 'crate-row' + (where ? ' on' : ''), 'aria-label': `${r.title}${where ? `，${ROLE[where]}` : ''}`, onclick: () => { if (row._dragged) { row._dragged = false; return; } assign(S.target, r); } },
         h('span', { class: 'lib-cover', html: r.cover }),
         h('span', { class: 'lib-main' }, h('b', {}, r.title), h('small', {}, r.meta)),
         h('span', { class: 'c-num' }, String(r.bpm)),
         h('span', { class: 'c-key' }, h('b', {}, r.cam), h('small', {}, r.key)),
         h('span', { class: 'c-dur' }, r.dur ? fmtTime(r.dur) : '—'),
         h('span', { class: 'c-fit' + (good ? ' good' : '') }, fit),
-        h('span', { class: 'c-on' }, where ? h('i', { class: `dk dk-${where}` }, where) : null));
+        h('span', { class: 'c-on' }, where ? roleTag(where, true) : null));
       dragRow(row, r);
       box.append(row);
     });
     paintTarget();
   }
-  // the deck a tapped song goes to; tapping a deck card or the A/B switch changes it
+  // the record a tapped song goes to; tapping a card or the switch in the crate header changes it
   function setTarget(d) { S.target = d; paintTarget(); }
   function paintTarget() {
     ['A', 'B'].forEach(d => { $('#track' + d).classList.toggle('target', S.target === d); const b = $(`#targetSeg [data-t="${d}"]`); b.classList.toggle('on', S.target === d); b.setAttribute('aria-pressed', S.target === d); });
@@ -481,7 +484,7 @@
         h('div', { class: 'score' }, h('b', {}, String(c.overall)), h('span', {}, '契合度'))),
       h('span', { class: 'sep' }),
       h('div', { class: 'fact' }, h('b', {}, `${A.an.key.camelot} → ${B.an.key.camelot}`), h('small', { class: keyCls }, c.rel)),
-      h('div', { class: 'fact', title: `变速带来 ${c.semis >= 0 ? '+' : ''}${c.semis.toFixed(2)} 半音的音高变化` }, h('b', {}, `${A.an.bpm} → ${B.an.bpm}`), h('small', { class: bpmCls }, `B ${c.bpmPct >= 0 ? '加快' : '放慢'} ${Math.abs(c.bpmPct).toFixed(1)}%`)));
+      h('div', { class: 'fact', title: `变速带来 ${c.semis >= 0 ? '+' : ''}${c.semis.toFixed(2)} 半音的音高变化` }, h('b', {}, `${A.an.bpm} → ${B.an.bpm}`), h('small', { class: bpmCls }, `后一首${c.bpmPct >= 0 ? '加快' : '放慢'} ${Math.abs(c.bpmPct).toFixed(1)}%`)));
   }
 
   // twelve hours of the Camelot wheel as dots; the two songs are the large ones
@@ -1528,6 +1531,125 @@
     return all.filter(x => x.p === planId).map(x => x.s);
   }
 
+  /* ---- first visit: a short walk through the first page. Each step is pinned to the thing it is about,
+     the rest of the page is dimmed and blurred. As many steps as there are things to point at, no more. ---- */
+  const TOUR_KEY = 'segue.tour.v1';
+  const TOUR = [
+    { at: ['#trackA', '#trackB'], side: 'right', t: '两张唱片', d: '上面的先放，下面的接上去。点唱片试听，转动它找位置。' },
+    { at: ['#crate'], side: 'left', t: '换歌', d: FINE ? '先点选一张唱片，再点曲库里的一首；也可以直接拖到唱片上。' : '先点选一张唱片，再点曲库里的一首。' },
+    { at: ['.seam-row'], side: 'right', t: '搭不搭', d: '分数越高越好接。右边的按钮把两首对调。' },
+    { at: ['.pair-acts'], side: 'right', t: '看接法', d: 'AI 给出三种接法，选一种跟着练。想再看这段引导，点右上角的问号。' },
+  ];
+  const Tour = { on: false, i: 0 };
+  const tourSeen = () => { try { return !!localStorage.getItem(TOUR_KEY); } catch (e) { return false; } };
+  function tourRect(step) {
+    const els = step.at.map(s => $(s)).filter(Boolean);
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    els.forEach(el => { const b = el.getBoundingClientRect(); x0 = Math.min(x0, b.left); y0 = Math.min(y0, b.top); x1 = Math.max(x1, b.right); y1 = Math.max(y1, b.bottom); });
+    const pad = 6, x = Math.max(4, x0 - pad), y = Math.max(4, y0 - pad), w = Math.min(innerWidth - 4, x1 + pad) - x, hh = Math.min(innerHeight - 4, y1 + pad) - y;
+    return { x, y, w, h: hh, r: Math.min((parseFloat(getComputedStyle(els[0]).borderTopLeftRadius) || 12) + pad, w / 2, hh / 2) };
+  }
+  // the shade is one sheet with a rounded hole cut where the thing is
+  function tourPaint(r) {
+    const T = Tour, f = n => n.toFixed(1), q = f(r.r);
+    const hole = `M${f(r.x + r.r)} ${f(r.y)}h${f(r.w - 2 * r.r)}a${q} ${q} 0 0 1 ${q} ${q}v${f(r.h - 2 * r.r)}a${q} ${q} 0 0 1 -${q} ${q}h${f(2 * r.r - r.w)}a${q} ${q} 0 0 1 -${q} -${q}v${f(2 * r.r - r.h)}a${q} ${q} 0 0 1 ${q} -${q}z`;
+    const cp = `path(evenodd, "M0 0h${innerWidth}v${innerHeight}h${-innerWidth}z${hole}")`;
+    T.shade.style.webkitClipPath = cp; T.shade.style.clipPath = cp;
+    Object.assign(T.ring.style, { transform: `translate(${f(r.x)}px, ${f(r.y)}px)`, width: f(r.w) + 'px', height: f(r.h) + 'px', borderRadius: q + 'px' });
+  }
+  // the card sits beside the thing where there is room, otherwise at the far end of the screen
+  function tourCard(r, side) {
+    const c = Tour.card, vw = innerWidth, vh = innerHeight, m = 12, gap = 16, cw = c.offsetWidth, ch = c.offsetHeight;
+    const fits = { right: vw - (r.x + r.w) - gap - m >= cw, left: r.x - gap - m >= cw, bottom: vh - (r.y + r.h) - gap - m >= ch, top: r.y - gap - m >= ch };
+    const s = [side, 'right', 'left', 'bottom', 'top'].find(k => fits[k]);
+    let x, y;
+    if (s === 'right' || s === 'left') { x = s === 'right' ? r.x + r.w + gap : r.x - gap - cw; y = r.h > ch + 48 ? r.y + 24 : r.y + (r.h - ch) / 2; }
+    else if (s) { x = r.x + (r.w - cw) / 2; y = s === 'bottom' ? r.y + r.h + gap : r.y - gap - ch; }
+    // no room beside it: under a thing that fills the screen (its top is what matters), else at the far end
+    else { x = (vw - cw) / 2; y = r.h > vh * 0.55 || r.y + r.h / 2 < vh / 2 ? vh - ch - m : 76; }
+    c.style.transform = `translate(${Math.round(clamp(x, m, Math.max(m, vw - cw - m)))}px, ${Math.round(clamp(y, m, Math.max(m, vh - ch - m)))}px)`;
+  }
+  function tourShow(i, still) {
+    const T = Tour, step = TOUR[i], n = TOUR.length;
+    T.i = i; T.shownAt = performance.now();
+    // bring the thing into view first, then measure it
+    const els = step.at.map(s => $(s)), top = els[0].getBoundingClientRect().top, bottom = els[els.length - 1].getBoundingClientRect().bottom, head = 76, vh = innerHeight;
+    if (top < head || bottom > vh - 12) window.scrollBy({ top: bottom - top > vh - head - 24 ? top - head : (top + bottom) / 2 - (vh + head) / 2, behavior: 'instant' });
+    T.n.textContent = `${i + 1} / ${n}`;
+    T.t.textContent = step.t; T.d.textContent = step.d;
+    T.prev.style.display = i ? '' : 'none';
+    T.next.textContent = i === n - 1 ? '开始' : '下一步';
+    [...T.dots.children].forEach((d, k) => d.classList.toggle('on', k === i));
+    const to = tourRect(step), from = still || !T.rect ? to : T.rect;
+    tourCard(to, step.side);
+    const dur = still || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 360, t0 = performance.now();
+    cancelAnimationFrame(T.raf); clearTimeout(T.tm);
+    const run = () => {
+      const k = dur ? clamp((performance.now() - t0) / dur) : 1, e = 1 - Math.pow(1 - k, 4), mix = key => from[key] + (to[key] - from[key]) * e;
+      T.rect = { x: mix('x'), y: mix('y'), w: mix('w'), h: mix('h'), r: mix('r') };
+      tourPaint(T.rect);
+      if (k < 1) T.raf = requestAnimationFrame(run);
+    };
+    run();
+    // a throttled page gets no frames: land on the target anyway
+    T.tm = setTimeout(() => { cancelAnimationFrame(T.raf); T.rect = to; tourPaint(to); }, dur + 80);
+  }
+  function startTour() {
+    const T = Tour;
+    if (T.on || S.view !== 'tracks' || $('#help').open) return;
+    if (S.preview) stopPreview();
+    T.shade = h('div', { class: 'tour-shade' }); T.ring = h('div', { class: 'tour-ring' });
+    T.n = h('span', { class: 'tour-n' }); T.t = h('h2', { id: 'tourT' }); T.d = h('p', { id: 'tourD' });
+    T.dots = h('span', { class: 'tour-dots', 'aria-hidden': 'true' }, TOUR.map(() => h('i')));
+    T.prev = h('button', { class: 'btn sm quiet', onclick: () => tourShow(T.i - 1) }, '上一步');
+    T.next = h('button', { class: 'btn sm primary', onclick: () => { if (T.i < TOUR.length - 1) tourShow(T.i + 1); else endTour(); } }, '下一步');
+    T.card = h('div', { class: 'tour-card still', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'tourT', 'aria-describedby': 'tourD' },
+      h('div', { class: 'tour-top' }, T.n, h('button', { class: 'tour-skip', onclick: endTour }, '跳过')),
+      T.t, T.d, h('div', { class: 'tour-foot' }, T.dots, T.prev, T.next));
+    T.el = h('div', { class: 'tour' }, T.shade, T.ring, T.card);
+    if (!(window.CSS && CSS.supports('clip-path', 'path("M0 0h1v1z")'))) T.el.classList.add('no-clip');
+    T.inert = [...document.body.children].filter(el => !/^(SCRIPT|STYLE)$/.test(el.tagName));
+    T.inert.forEach(el => { el.inert = true; });
+    document.body.append(T.el);
+    T.on = true; T.rect = null;
+    T.key = e => {
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); endTour(); }
+      else if (e.key === 'ArrowRight') T.next.click();
+      else if (e.key === 'ArrowLeft') { if (T.i > 0) tourShow(T.i - 1); }
+      else if (e.key === 'Tab') {
+        const f = [...T.card.querySelectorAll('button')].filter(b => b.style.display !== 'none');
+        e.preventDefault(); f[(f.indexOf(document.activeElement) + (e.shiftKey ? -1 : 1) + f.length) % f.length].focus();
+      }
+    };
+    // the page moved under the card (a resize, a rotated phone): measure again, no glide
+    T.fix = () => {
+      if (!T.on || performance.now() - T.shownAt < 450) return;
+      cancelAnimationFrame(T.raf); clearTimeout(T.tm);
+      T.rect = tourRect(TOUR[T.i]); tourPaint(T.rect); tourCard(T.rect, TOUR[T.i].side);
+    };
+    document.addEventListener('keydown', T.key, true);
+    window.addEventListener('resize', T.fix); window.addEventListener('scroll', T.fix, { passive: true });
+    T.el.addEventListener('wheel', e => e.preventDefault(), { passive: false });
+    T.el.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
+    tourShow(0, true);
+    T.next.focus({ preventScroll: true });
+    const free = () => T.card.classList.remove('still');
+    requestAnimationFrame(() => requestAnimationFrame(free)); setTimeout(free, 120);
+  }
+  function endTour() {
+    const T = Tour;
+    if (!T.on) return;
+    T.on = false;
+    try { localStorage.setItem(TOUR_KEY, '1'); } catch (e) { /* shown again next time */ }
+    cancelAnimationFrame(T.raf); clearTimeout(T.tm);
+    document.removeEventListener('keydown', T.key, true);
+    window.removeEventListener('resize', T.fix); window.removeEventListener('scroll', T.fix);
+    T.inert.forEach(el => { el.inert = false; });
+    const el = T.el;
+    el.classList.add('out'); setTimeout(() => el.remove(), 260);
+    window.scrollTo({ top: 0 });
+  }
+
   function boot() {
     readColors();
     trackCard('A'); trackCard('B'); renderCompat();
@@ -1556,10 +1678,11 @@
     $('#helpBtn').addEventListener('click', openHelp);
     $('#footHelp').addEventListener('click', openHelp);
     $('#helpClose').addEventListener('click', () => $('#help').close());
+    $('#tourAgain').addEventListener('click', () => { $('#help').close(); go('tracks'); setTimeout(startTour, 120); });
     // a click on the dimmed backdrop lands on the dialog element itself
     $('#help').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
     document.addEventListener('keydown', e => {
-      if ($('#help').open || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (Tour.on || $('#help').open || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.target.closest('input, textarea')) return;
       if (e.key === 'm' || e.key === 'M') { setVol({ muted: !VOL.muted }); return; }
       if (e.key === '?') { openHelp(); return; }
@@ -1591,7 +1714,8 @@
     Coach.onState(updateChip);
     Engine.context();
     wireChrome();
-    loadDemo('A').catch(() => {}); loadDemo('B').catch(() => {});
+    // the walk-through waits for both records, so every step has something real to point at
+    Promise.allSettled([loadDemo('A'), loadDemo('B')]).then(() => { if (!tourSeen() || /[?&]tour\b/.test(location.search)) setTimeout(startTour, 300); });
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => pill($('nav.steps')));
     requestAnimationFrame(frame);
     // a covered or throttled page stops getting animation frames while the audio plays on: keep the clock moving
