@@ -80,7 +80,7 @@
     const [mn, mx] = RANGES[a.ctrl] || [0, 1];
     const icon = a.ctrl === 'play' ? ICON.play : a.ctrl === 'sync' ? ICON.sync : a.ctrl === 'fader' ? ICON.fader(a.to) : ICON.knob((a.to - mn) / (mx - mn));
     const v = verb(a);
-    return `<span class="ins${mini ? ' mini' : ''}" title="${a.label || ''}"><b class="dk dk-${a.deck}">${a.deck}</b><i class="ic">${icon}</i><span class="ins-k">${CTRL_SHORT[a.ctrl]}</span>${v ? `<span class="ins-v">${v}</span>` : ''}${!mini && a.dur ? `<span class="ins-d">${a.dur} 小节</span>` : ''}</span>`;
+    return `<span class="ins${mini ? ' mini' : ''}" title="${a.label || ''}"><b class="dk dk-${a.deck}">${TAG[a.deck]}</b><i class="ic">${icon}</i><span class="ins-k">${CTRL_SHORT[a.ctrl]}</span>${v ? `<span class="ins-v">${v}</span>` : ''}${!mini && a.dur ? `<span class="ins-d">${a.dur} 小节</span>` : ''}</span>`;
   }
 
   function capsule(g, x, y, w, h, r) { g.beginPath(); if (g.roundRect) g.roundRect(x, y, w, h, Math.min(r, h / 2, w / 2)); else g.rect(x, y, w, h); }
@@ -134,7 +134,7 @@
       const [min, max, def] = RANGES[ctrl];
       Object.assign(this, { deck, ctrl, kind, min, max, def, value: ctrl === 'fader' && deck === 'B' ? 0 : def, ghost: null, active: false });
       this.el = h('div', { class: 'ctl ctl-' + kind });
-      const aria = { role: 'slider', tabindex: 0, 'aria-label': `${deck === 'X' ? '' : deck + ' '}${label}`, 'aria-valuemin': min, 'aria-valuemax': max };
+      const aria = { role: 'slider', tabindex: 0, 'aria-label': `${deck === 'X' ? '' : ROLE[deck] + ' '}${label}`, 'aria-valuemin': min, 'aria-valuemax': max };
       if (kind === 'knob') {
         this.face = h('div', { class: 'knob', ...aria });
         this.face.innerHTML = `<svg viewBox="-26 -26 52 52"><path class="trk" d="${arc(23.5, -135, 135)}"/><path class="val"/><circle class="cap" r="17"/><line class="ptr" x1="0" y1="-6" x2="0" y2="-13"/><circle class="gdot" r="3" cx="0" cy="-23.5" style="display:none"/></svg>`;
@@ -201,7 +201,7 @@
       if (c === 'low' || c === 'mid' || c === 'high') { const db = Engine.eqDb(v); return v < 0.02 ? 'KILL' : `${db > 0 ? '+' : ''}${db.toFixed(1)} dB`; }
       if (c === 'filter') { if (Math.abs(v) < 0.02) return 'OFF'; const hz = v < 0 ? Engine.lpfHz(v) : Engine.hpfHz(v); return `${v < 0 ? 'LPF' : 'HPF'} ${hz >= 1000 ? (hz / 1000).toFixed(1) + 'k' : Math.round(hz)}`; }
       if (c === 'tempo') return `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`;
-      if (c === 'xf') return Math.abs(v - 0.5) < 0.01 ? 'CENTER' : `A ${Math.round(Math.min(1, (1 - v) * 2) * 100)} · B ${Math.round(Math.min(1, v * 2) * 100)}`;
+      if (c === 'xf') return Math.abs(v - 0.5) < 0.01 ? 'CENTER' : `前 ${Math.round(Math.min(1, (1 - v) * 2) * 100)} · 后 ${Math.round(Math.min(1, v * 2) * 100)}`;
       return `${Math.round(v * 100)}%`;
     }
     set(v) {
@@ -313,8 +313,10 @@
   }
 
   /* ================= view 1 · tracks ================= */
-  // on this page the two records are named by their part in the mix: the one playing first, the one coming in
-  const ROLE = { A: '先放', B: '后接' };
+  // nothing in the interface calls a song by a letter: they are the one before and the one after the mix,
+  // and a round badge carries the single character
+  const ROLE = { A: '前一首', B: '后一首' }, TAG = { A: '前', B: '后' };
+  const dk = (d, cls) => h('i', { class: `dk dk-${d}` + (cls ? ' ' + cls : '') }, TAG[d]);
   const roleTag = (d, sm) => h('i', { class: `role role-${d}` + (sm ? ' sm' : '') }, ROLE[d]);
   function trackCard(id) {
     const card = $('#track' + id), t = S.tracks[id];
@@ -451,9 +453,9 @@
     if (r.lib) loadLib(deck, r.id); else loadFile(deck, r.file, r.id);
   }
   function uploadBtn(id) {
-    const input = h('input', { type: 'file', accept: 'audio/*', 'aria-label': `为 Deck ${id} 选择音频文件` });
+    const input = h('input', { type: 'file', accept: 'audio/*', 'aria-label': `为${ROLE[id]}选择音频文件` });
     input.addEventListener('change', () => { if (input.files[0]) loadFile(id, input.files[0]); });
-    return h('label', { class: 'icon-btn file-btn', title: '换一首（也可以直接拖进这张卡片）', 'aria-label': `为 Deck ${id} 换一首歌`, html: ICON.upload }, input);
+    return h('label', { class: 'icon-btn file-btn', title: '换一首（也可以直接拖进这张卡片）', 'aria-label': `把${ROLE[id]}换掉`, html: ICON.upload }, input);
   }
   function setHead(id, sec) {
     const t = S.tracks[id], card = $('#track' + id);
@@ -568,7 +570,7 @@
     const t = S.tracks[id];
     Analysis.shiftDownbeat(t.an, beats);
     trackCard(id); refreshTracksUI();
-    toast(`Deck ${id} 小节线已${beats > 0 ? '右' : '左'}移一拍`);
+    toast(`小节线已${beats > 0 ? '右' : '左'}移一拍`);
   }
   function refreshTracksUI() {
     renderCompat();
@@ -668,7 +670,7 @@
   }
 
   /* ================= view 2 · plans ================= */
-  const PLAN_LINE = { swap: p => `两首叠 ${p.len} 小节，再换低音`, filter: () => 'B 慢慢变亮，A 慢慢变闷', echo: () => 'A 留个回声，B 直接进来' };
+  const PLAN_LINE = { swap: p => `两首叠 ${p.len} 小节，再换低音`, filter: () => '后一首慢慢变亮，前一首慢慢变闷', echo: () => '前一首留个回声，后一首直接进来' };
   const ARROW = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>';
   function renderPlans(enter) {
     const ps = S.planset;
@@ -679,7 +681,7 @@
     const pending = Coach.state === 'online' && !ai && !S.aiPlansFailed;
     const pl = $('#pairLine');
     pl.innerHTML = '';
-    pl.append(h('i', { class: 'dk dk-A' }, 'A'), h('b', {}, A.title), h('span', { html: ARROW }), h('i', { class: 'dk dk-B' }, 'B'), h('b', {}, B.title),
+    pl.append(dk('A'), h('b', {}, A.title), h('span', { html: ARROW }), dk('B'), h('b', {}, B.title),
       h('span', {}, `· 契合度 ${ps.compat.overall} ·`), h('button', { class: 'linkbtn', onclick: () => go('tracks') }, '换歌'));
     const box = $('#plans'), hist = loadHist();
     box.innerHTML = '';
@@ -754,9 +756,9 @@
     return [
       h('div', { class: 'sc-over', 'aria-hidden': 'true' }, h('span', { class: 'band', style: `left:${pc(p.playBar)};width:${wd(p.playBar, outA)}` })),
       h('span'), h('div', { class: 'sc-ruler' }, ticks, hand ? h('span', { class: 'hand', style: `left:${pc(hand.bar)}` }, `第 ${hand.bar} 小节 · ${hand.ctrl === 'low' ? '换低音' : '交接'}`) : null),
-      h('i', { class: 'dk dk-A' }, 'A'), h('div', { class: 'sc-lane' }, lane(A, b => b - p.startA, x0, Math.min(x1, A.nBars - p.startA))),
+      dk('A'), h('div', { class: 'sc-lane' }, lane(A, b => b - p.startA, x0, Math.min(x1, A.nBars - p.startA))),
       h('span'), moves('A'),
-      h('i', { class: 'dk dk-B' }, 'B'), h('div', { class: 'sc-lane' }, lane(B, b => b - p.cueB + p.playBar, p.playBar, x1)),
+      dk('B'), h('div', { class: 'sc-lane' }, lane(B, b => b - p.cueB + p.playBar, p.playBar, x1)),
       h('span'), moves('B'),
       hand ? h('div', { class: 'sc-over', 'aria-hidden': 'true' }, h('span', { class: 'line', style: `left:${pc(hand.bar)}` })) : null,
     ].filter(Boolean);
@@ -803,8 +805,8 @@
     const ui = {};
     ui.title = h('div', { class: 't' }); ui.sub = h('div', { class: 's' });
     ui.cue = h('button', { class: 'tbtn cue', onclick: () => cuePressed(id), title: '停下时设置 CUE 点；播放时跳回 CUE 点' }, 'CUE');
-    ui.sync = h('button', { class: 'tbtn sync', onclick: () => syncPressed(id), title: id === 'B' && FINE ? '同步（S）' : '同步', 'aria-label': `同步 Deck ${id}`, html: ICON.sync.replace('<svg', '<svg width="20" height="20"') });
-    ui.play = h('button', { class: 'tbtn play', onclick: () => playPressed(id), title: id === 'B' && FINE ? '播放（空格）' : '播放', 'aria-label': `播放或暂停 Deck ${id}` });
+    ui.sync = h('button', { class: 'tbtn sync', onclick: () => syncPressed(id), title: id === 'B' && FINE ? '同步（S）' : '同步', 'aria-label': `同步${ROLE[id]}`, html: ICON.sync.replace('<svg', '<svg width="20" height="20"') });
+    ui.play = h('button', { class: 'tbtn play', onclick: () => playPressed(id), title: id === 'B' && FINE ? '播放（空格）' : '播放', 'aria-label': `播放或暂停${ROLE[id]}` });
     const k = (ctrl, label) => new Ctl(id, ctrl, 'knob', label).el;
     ui.vinyl = vinyl(id, {
       tap: () => playPressed(id),
@@ -816,10 +818,10 @@
         else if (!S.session) Engine.seek(d, clamp(Engine.pos(d) + da / 200, 0, d.an.duration - 0.1));
       },
       end: () => { const d = Engine.decks[id]; if (d.bend) Engine.setBend(d, 0); },
-    }, `Deck ${id}：点按播放或暂停，转动微调`);
+    }, `${ROLE[id]}：点按播放或暂停，转动微调`, true);
     deckUI[id] = ui;
-    return h('section', { class: 'deck', 'data-deck': id, 'aria-label': `Deck ${id}` },
-      h('div', { class: 'tt' }, ui.vinyl, h('div', { class: 'meta' }, ui.title, ui.sub)),
+    return h('section', { class: 'deck', 'data-deck': id, 'aria-label': ROLE[id] },
+      h('div', { class: 'tt' }, ui.vinyl, h('div', { class: 'meta' }, h('div', { class: 'tl' }, dk(id), ui.title), ui.sub)),
       h('div', { class: 'deck-main' },
         h('div', { class: 'deck-info' }, ui.cue, ui.sync, ui.play),
         h('div', { class: 'knobs' }, k('low', 'LOW'), k('mid', 'MID'), k('high', 'HIGH'), k('filter', 'FILTER'), k('echo', 'ECHO'), k('tempo', 'TEMPO'))));
@@ -828,7 +830,7 @@
   function mixerPanel() {
     const fader = id => new Ctl(id, 'fader', 'vf', '音量推子').el;
     const meter = id => { const i = h('i'); deckUI[id + 'meter'] = i; return h('u', {}, i); };
-    const row = id => { const i = h('i'); deckUI[id + 'low'] = i; return h('div', { class: 'low-row' }, h('span', {}, id), h('u', {}, i)); };
+    const row = id => { const i = h('i'); deckUI[id + 'low'] = i; return h('div', { class: 'low-row' }, h('span', {}, TAG[id]), h('u', {}, i)); };
     const low = h('div', { class: 'lowmeter', title: '两台同时亮满就是低频打架' }, h('span', {}, '低频占用'), row('A'), row('B'));
     deckUI.low = low;
     deckUI.phase = h('div', { class: 'phase idle' }, h('i'), h('span', {}, '还没对拍'));
@@ -836,7 +838,7 @@
     return h('section', { class: 'mixer', 'aria-label': '调音台' },
       h('div', { class: 'mx-faders' }, fader('A'), h('div', { class: 'mx-meters', 'aria-hidden': 'true' }, meter('A'), meter('B')), fader('B')),
       h('div', { class: 'mx-side' }, low, deckUI.phase,
-        h('div', { class: 'xfade' }, h('div', { class: 'ends' }, h('span', {}, 'A'), h('span', {}, 'B')), xf.el)));
+        h('div', { class: 'xfade' }, h('div', { class: 'ends' }, h('span', {}, TAG.A), h('span', {}, TAG.B)), xf.el)));
   }
 
   function playPressed(id) {
@@ -906,7 +908,7 @@
   }
   function updateStartBtn() {
     const b = $('#startBtn');
-    b.innerHTML = (S.session ? ICON.stop : ICON.play.replace('<svg', '<svg width="14" height="14"')) + (S.session ? '停止' : S.mode === 'free' ? (Engine.decks.A && Engine.decks.A.playing ? '暂停 A' : '播放 A') : S.mode === 'demo' ? '再看一遍' : S.drill ? '开始单练' : '开始');
+    b.innerHTML = (S.session ? ICON.stop : ICON.play.replace('<svg', '<svg width="14" height="14"')) + (S.session ? '停止' : S.mode === 'free' ? (Engine.decks.A && Engine.decks.A.playing ? '暂停前一首' : '播放前一首') : S.mode === 'demo' ? '再看一遍' : S.drill ? '开始单练' : '开始');
     b.classList.toggle('primary', !S.session);
     b.classList.toggle('quiet', !!S.session);
   }
@@ -1019,7 +1021,7 @@
     if (B.playing || s.bStartRel != null || rel < p.playBar + 1) return;
     catchUpB(p);
     s.bStartRel = p.playBar; s.bStartBy = 'ai';
-    toast('帮你按了 B 的 PLAY，这一步记一半分');
+    toast('帮你按了后一首的 PLAY，这一步记一半分');
   }
 
   function prepStatus(p) {
@@ -1074,7 +1076,7 @@
           unmet.forEach(x => { if (x.ctrl === 'sync') wanted.add('B.sync'); else ghosts.set(`${x.deck}.${x.ctrl}`, [x.to, true]); });
         } else {
           when = '准备好了 · 第一步'; what = steps[0].actions.map(a => ins(a)).join('');
-          why = s ? '' : 'A 先放 4 小节';
+          why = s ? '' : '前一首先放 4 小节';
         }
         cnt = countSVG(prep.filter(x => x.done).length / prep.length, `${prep.filter(x => x.done).length}/${prep.length}`, '准备', C.coach);
       } else if (idx === -1) {
@@ -1097,7 +1099,7 @@
         what = st.actions.map(a => ins(a)).join('');
         why = st.actions.map(a => a.why).filter(Boolean)[0] || '';
         const nx = steps[idx + 1];
-        if (nx) next = nx.actions.map(a => `${a.deck} ${CTRL_SHORT[a.ctrl]}${verb(a) ? ' ' + verb(a) : ''}`).join(' + ');
+        if (nx) next = nx.actions.map(a => `${ROLE[a.deck]} ${CTRL_SHORT[a.ctrl]}${verb(a) ? ' ' + verb(a) : ''}`).join(' + ');
         if (!demo) {
           for (const a of p.actions) {
             if (a.ctrl === 'play') { if (Math.abs(a.bar - rel) <= 2 && s && s.bStartRel == null) wanted.add('B.play'); continue; }
@@ -1106,10 +1108,10 @@
         }
         if (isPlay && !demo && beats <= 4 && beats > 0) alerts.push(['info', FINE ? '“现在”时按 PLAY（空格）' : '“现在”时按 PLAY']);
       }
-      if (s && s.bStartBy === 'ai') alerts.push(['info', '帮你按了 B']);
+      if (s && s.bStartBy === 'ai') alerts.push(['info', '帮你按了后一首']);
       if (s && s.bStartBy === 'user' && s.bStartRel != null) {
         const off = Math.round((s.bStartRel - p.playBar) * 4);
-        alerts.push(off === 0 ? ['good', 'B 进得准'] : ['hot', `B ${off > 0 ? '晚' : '早'}了 ${Math.abs(off)} 拍`]);
+        alerts.push(off === 0 ? ['good', '后一首进得准'] : ['hot', `后一首${off > 0 ? '晚' : '早'}了 ${Math.abs(off)} 拍`]);
       }
       if (demo) alerts.push(['info', '动旋钮即接手']);
       stepIdx = idx; stepN = steps.length;
@@ -1200,7 +1202,7 @@
       g.beginPath(); g.arc(18, y + laneH / 2, 12, 0, Math.PI * 2);
       g.fillStyle = id === 'A' ? C.text : C.card; g.fill();
       if (id === 'B') { g.strokeStyle = C.text; g.lineWidth = 1.5; g.stroke(); }
-      g.fillStyle = id === 'A' ? C.ink : C.text; g.font = `700 12px ${FONT}`; g.textAlign = 'center'; g.fillText(id, 18, y + laneH / 2 + 4); g.textAlign = 'left';
+      g.fillStyle = id === 'A' ? C.ink : C.text; g.font = `700 12px ${FONT}`; g.textAlign = 'center'; g.fillText(TAG[id], 18, y + laneH / 2 + 4); g.textAlign = 'left';
     });
     if (p) {
       // each move is a pill under its lane, starting on its bar; the one to do now is outlined
@@ -1320,7 +1322,7 @@
     rows.forEach((r, i) => {
       const y0 = top + i * rowH, [mn, mx] = RANGES[r.ctrl], Y = v => y0 + rowH - 6 - clamp((v - mn) / (mx - mn)) * (rowH - 12);
       g.fillStyle = alpha(C.text, 0.03); g.fillRect(L, y0 + 2, w - L - 8, rowH - 4);
-      g.fillStyle = deckColor(r.deck); g.font = `600 11px ${FONT}`; g.fillText(`${r.deck} ${NAME[r.ctrl]}`, 4, y0 + rowH / 2 + 4);
+      g.fillStyle = deckColor(r.deck); g.font = `600 11px ${FONT}`; g.fillText(`${TAG[r.deck]} ${NAME[r.ctrl]}`, 4, y0 + rowH / 2 + 4);
       g.strokeStyle = C.coach; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath();
       for (let px = X(x0); px <= X(x1); px += 3) { const rel = x0 + (px - L) / (w - L - 8) * (x1 - x0), v = Planner.stateAt(p, rel)[r.deck][r.ctrl]; px === X(x0) ? g.moveTo(px, Y(v)) : g.lineTo(px, Y(v)); }
       g.stroke(); g.setLineDash([]);
@@ -1330,7 +1332,7 @@
       g.stroke();
     });
     const m = R.meta;
-    if (m.bStartRel != null) { const x = X(m.bStartRel); g.fillStyle = C['deck-b']; g.fillRect(x - 1, top - 4, 2, rows.length * rowH + 4); g.font = `500 10px ${FONT}`; g.fillText(m.bStartBy === 'ai' ? 'B 起播（帮你按的）' : 'B 起播', x + 4, top + rows.length * rowH + 14); }
+    if (m.bStartRel != null) { const x = X(m.bStartRel); g.fillStyle = C['deck-b']; g.fillRect(x - 1, top - 4, 2, rows.length * rowH + 4); g.font = `500 10px ${FONT}`; g.fillText(m.bStartBy === 'ai' ? '后一首起播（帮你按的）' : '后一首起播', x + 4, top + rows.length * rowH + 14); }
   }
 
   /* ================= navigation & boot ================= */
@@ -1438,7 +1440,7 @@
     [() => ICON.knob(0.8), 'ECHO', '回声：让声音拖着尾巴离开。'],
     [() => ICON.knob(0.5), 'TEMPO', '速度：调快调慢，让两首歌一样快。'],
     [() => ICON.fader(0.8), '推子', '这一台有多响。'],
-    [() => XF_ICON, '交叉推子', '在 A 和 B 之间分配音量。'],
+    [() => XF_ICON, '交叉推子', '在前一首和后一首之间分配音量。'],
     [() => ICON.play, 'PLAY', '开始或暂停这一台。'],
     [() => ICON.sync, 'SYNC', '一键把速度和拍子对齐另一台。'],
     [() => 'CUE', 'CUE', '停着时按，记下起点；播放中按，跳回起点。'],

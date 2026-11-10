@@ -813,6 +813,16 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
 @media (hover: hover) and (pointer: fine) { .tour-skip:hover { background: var(--booth-2); color: var(--text); } }
 @media (prefers-reduced-transparency: reduce) { .tour-shade { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(0, 0, 0, 0.7); } }
 @media (prefers-reduced-motion: reduce) { .tour, .tour-card { transition: none; } .tour-shade, .tour-ring, .tour-card { animation: none; } }
+
+/* ---------- no letters anywhere: the two songs are 前一首 and 后一首, the round badge says 前 or 后 ---------- */
+.dk { font-size: 12px; font-weight: 600; }
+.dk.lg, .what .dk, .next-chip .dk { font-size: 16px; }
+.c-on .role.sm { padding: 0 8px; }
+.crate-cols, .crate-row { grid-template-columns: 52px minmax(0, 1fr) 56px 64px 56px 56px 56px; }
+#targetSeg button { min-width: 64px; }
+.deck .tt .tl { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; }
+.deck .tt .tl .t { min-width: 0; }
+@media (max-width: 900px) { .deck .tt .tl { justify-content: flex-start; } }
 </style>
 
 </head>
@@ -848,8 +858,8 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
     <h3>快捷键</h3>
     <div class="keys">
       <span><kbd>Enter</kbd>开始 / 停止</span>
-      <span><kbd>空格</kbd>B 播放 / 暂停</span>
-      <span><kbd>S</kbd>B 同步到 A</span>
+      <span><kbd>空格</kbd>后一首播放 / 暂停</span>
+      <span><kbd>S</kbd>后一首对齐前一首</span>
       <span><kbd>↑</kbd><kbd>↓</kbd>微调选中的旋钮</span>
       <span><kbd>M</kbd>静音</span>
       <span><kbd>?</kbd>打开这页</span>
@@ -884,7 +894,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
       </div>
       <section class="crate" id="crate" aria-label="曲库">
         <div class="crate-head">
-          <div><h2>曲库</h2><span class="crate-pick">点一首放到<span class="seg" id="targetSeg" role="group" aria-label="换哪一张唱片"><button data-t="A" class="on">先放</button><button data-t="B">后接</button></span><span class="mouse-only">或拖到唱片上</span></span></div>
+          <div><h2>曲库</h2><span class="crate-pick">点一首放到<span class="seg" id="targetSeg" role="group" aria-label="换哪一张唱片"><button data-t="A" class="on">前一首</button><button data-t="B">后一首</button></span><span class="mouse-only">或拖到唱片上</span></span></div>
           <label class="btn sm quiet file-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>上传<input type="file" id="crateFile" accept="audio/*" multiple aria-label="上传自己的歌"></label>
         </div>
         <div class="crate-scroll">
@@ -987,7 +997,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
       </section>
       <section class="tile full compare" aria-label="这次过渡的回放">
         <h2>你 vs 谱</h2>
-        <div class="legend"><span><i style="border-color:var(--deck-a)"></i>你的 A</span><span><i style="border-color:var(--deck-b)"></i>你的 B</span><span><i style="border-color:var(--coach);border-top-style:dashed"></i>谱</span><span><i style="border-color:var(--hot);border-top-width:6px;opacity:.5"></i>低音打架</span></div>
+        <div class="legend"><span><i style="border-color:var(--deck-a)"></i>前一首</span><span><i style="border-color:var(--deck-b)"></i>后一首</span><span><i style="border-color:var(--coach);border-top-style:dashed"></i>谱</span><span><i style="border-color:var(--hot);border-top-width:6px;opacity:.5"></i>低音打架</span></div>
         <canvas id="compareCanvas"></canvas>
       </section>
       <section class="tile narrow metrics-tile" aria-label="五项评分"><h2>五项</h2><div class="metrics" id="metrics"></div></section>
@@ -1946,17 +1956,17 @@ const Planner = (() => {
         tags: ['夜店最常用', '丝滑'],
         fit: Math.round(100 * (0.5 * c.keyScore + 0.3 * c.bpmScore + 0.2 * (introB >= 8 ? 1 : 0.55))),
         pre: [
-          { deck: 'B', ctrl: 'sync', label: '按 B 的 SYNC，让 B 的速度追上 A' },
-          { deck: 'B', ctrl: 'low', to: 0, label: '把 B 的 LOW 拧到底' },
-          { deck: 'B', ctrl: 'fader', to: 0, label: 'B 的推子放在最下面' },
+          { deck: 'B', ctrl: 'sync', label: '按 SYNC，让后一首的速度追上前一首' },
+          { deck: 'B', ctrl: 'low', to: 0, label: '把后一首的 LOW 拧到底' },
+          { deck: 'B', ctrl: 'fader', to: 0, label: '后一首的推子放在最下面' },
         ],
         actions: [
-          { bar: 0, deck: 'B', ctrl: 'play', label: '在 A 的新乐句第一拍按 B 的 PLAY', why: '卡在乐句头，段落才对齐' },
-          { bar: 0, dur: half / 2, deck: 'B', ctrl: 'fader', to: 1, label: `${half / 2} 小节内慢慢把 B 推满`, why: 'B 还没低音，慢慢推不抢戏' },
-          { bar: half, deck: 'A', ctrl: 'low', to: 0, label: '交换低频：A 的 LOW 拧到底', why: '乐句头换低音，听着最顺' },
-          { bar: half, deck: 'B', ctrl: 'low', to: 0.5, label: '同时把 B 的 LOW 拧回 12 点', why: '一出一进，低音只留一首' },
-          { bar: half + 4, dur: 4, deck: 'A', ctrl: 'high', to: 0.22, label: '把 A 的 HIGH 慢慢收到 9 点', why: '两套镲会糊，A 先退' },
-          { bar: half + half / 2, dur: half / 2, deck: 'A', ctrl: 'fader', to: 0, label: `最后 ${half / 2} 小节把 A 拉下去`, why: 'A 自然淡出' },
+          { bar: 0, deck: 'B', ctrl: 'play', label: '前一首进新乐句的第一拍，按后一首的 PLAY', why: '卡在乐句头，段落才对齐' },
+          { bar: 0, dur: half / 2, deck: 'B', ctrl: 'fader', to: 1, label: `${half / 2} 小节内慢慢把后一首推满`, why: '后一首还没低音，慢慢推不抢戏' },
+          { bar: half, deck: 'A', ctrl: 'low', to: 0, label: '交换低频：前一首的 LOW 拧到底', why: '乐句头换低音，听着最顺' },
+          { bar: half, deck: 'B', ctrl: 'low', to: 0.5, label: '同时把后一首的 LOW 拧回 12 点', why: '一出一进，低音只留一首' },
+          { bar: half + 4, dur: 4, deck: 'A', ctrl: 'high', to: 0.22, label: '把前一首的 HIGH 慢慢收到 9 点', why: '两套镲会糊，前一首先退' },
+          { bar: half + half / 2, dur: half / 2, deck: 'A', ctrl: 'fader', to: 0, label: `最后 ${half / 2} 小节把前一首拉下去`, why: '前一首自然淡出' },
         ],
       });
     }
@@ -1964,21 +1974,21 @@ const Planner = (() => {
       const S = Math.max(8, align8(Math.min(outroA, barsA - 16)));
       plans.push({
         id: 'filter', name: '滤波推进', en: 'Filter Ride', difficulty: 2, len: 16, startA: S, cueB: analB.phraseOffset % 8,
-        tagline: 'B 从高通里长出来，A 闷下去让位',
+        tagline: '后一首从高通里长出来，前一首闷下去让位',
         tags: ['有张力', '16 小节'],
         fit: Math.round(100 * (0.4 * c.keyScore + 0.4 * c.bpmScore + 0.12)),
         pre: [
-          { deck: 'B', ctrl: 'sync', label: '按 B 的 SYNC，让 B 的速度追上 A' },
-          { deck: 'B', ctrl: 'filter', to: 0.75, label: 'B 的 FILTER 往右拧到 4 点钟（高通）' },
-          { deck: 'B', ctrl: 'fader', to: 0, label: 'B 的推子放在最下面' },
+          { deck: 'B', ctrl: 'sync', label: '按 SYNC，让后一首的速度追上前一首' },
+          { deck: 'B', ctrl: 'filter', to: 0.75, label: '后一首的 FILTER 往右拧到 4 点钟（高通）' },
+          { deck: 'B', ctrl: 'fader', to: 0, label: '后一首的推子放在最下面' },
         ],
         actions: [
-          { bar: 0, deck: 'B', ctrl: 'play', label: '在 A 的新乐句第一拍按 B 的 PLAY', why: 'B 现在只有高频' },
-          { bar: 0, dur: 4, deck: 'B', ctrl: 'fader', to: 1, label: '4 小节内推满 B', why: '只有高频，推满不打架' },
-          { bar: 4, dur: 8, deck: 'B', ctrl: 'filter', to: 0, label: '8 小节内把 B 的 FILTER 转回 12 点', why: '慢慢打开，就是一段铺垫' },
-          { bar: 4, dur: 8, deck: 'A', ctrl: 'filter', to: -0.6, label: '同时 A 的 FILTER 往左拧到 8 点钟', why: 'A 变闷，把空间让给 B' },
-          { bar: 8, deck: 'A', ctrl: 'low', to: 0, label: 'A 的 LOW 拧到底', why: 'B 的低音要来了，A 先让' },
-          { bar: 12, dur: 4, deck: 'A', ctrl: 'fader', to: 0, label: '最后 4 小节拉下 A', why: 'B 全开了，A 退场' },
+          { bar: 0, deck: 'B', ctrl: 'play', label: '前一首进新乐句的第一拍，按后一首的 PLAY', why: '后一首现在只有高频' },
+          { bar: 0, dur: 4, deck: 'B', ctrl: 'fader', to: 1, label: '4 小节内推满后一首', why: '只有高频，推满不打架' },
+          { bar: 4, dur: 8, deck: 'B', ctrl: 'filter', to: 0, label: '8 小节内把后一首的 FILTER 转回 12 点', why: '慢慢打开，就是一段铺垫' },
+          { bar: 4, dur: 8, deck: 'A', ctrl: 'filter', to: -0.6, label: '同时前一首的 FILTER 往左拧到 8 点钟', why: '前一首变闷，把空间让给后一首' },
+          { bar: 8, deck: 'A', ctrl: 'low', to: 0, label: '前一首的 LOW 拧到底', why: '后一首的低音要来了，前一首先让' },
+          { bar: 12, dur: 4, deck: 'A', ctrl: 'fader', to: 0, label: '最后 4 小节拉下前一首', why: '后一首全开了，前一首退场' },
         ],
       });
     }
@@ -1988,18 +1998,18 @@ const Planner = (() => {
       const cue = analB.firstDrop ?? analB.phraseOffset % 8;
       plans.push({
         id: 'echo', name: '回声收尾', en: 'Echo Out', difficulty: 1, len: 8, startA: S, cueB: cue,
-        tagline: 'A 用回声甩出去，B 直接从 drop 砸进来',
+        tagline: '前一首用回声甩出去，后一首直接从 drop 砸进来',
         tags: ['新手友好', '干脆利落'],
         fit: Math.round(100 * (0.1 * c.keyScore + 0.3 * c.bpmScore + 0.35 * (analB.firstDrop != null ? 1 : 0.5) + 0.1)),
         pre: [
-          { deck: 'B', ctrl: 'sync', label: '按 B 的 SYNC，让 B 的速度追上 A' },
-          { deck: 'B', ctrl: 'fader', to: 1, label: 'B 的推子先推满（B 会从 drop 直接进来）' },
+          { deck: 'B', ctrl: 'sync', label: '按 SYNC，让后一首的速度追上前一首' },
+          { deck: 'B', ctrl: 'fader', to: 1, label: '后一首的推子先推满（它会从 drop 直接进来）' },
         ],
         actions: [
-          { bar: 2, dur: 2, deck: 'A', ctrl: 'filter', to: -0.35, label: 'A 的 FILTER 往左拧一点', why: 'A 变暗，预告要换歌' },
-          { bar: 3, deck: 'A', ctrl: 'echo', to: 0.8, label: '最后一小节：打开 A 的 ECHO', why: '让最后一拍拖出尾巴' },
-          { bar: 4, deck: 'A', ctrl: 'fader', to: 0, label: 'A 的推子一把拉下', why: '尾巴还在响，像甩出去' },
-          { bar: 4, deck: 'B', ctrl: 'play', label: '同一拍按 B 的 PLAY', why: 'B 从高潮直接接上' },
+          { bar: 2, dur: 2, deck: 'A', ctrl: 'filter', to: -0.35, label: '前一首的 FILTER 往左拧一点', why: '前一首变暗，预告要换歌' },
+          { bar: 3, deck: 'A', ctrl: 'echo', to: 0.8, label: '最后一小节：打开前一首的 ECHO', why: '让最后一拍拖出尾巴' },
+          { bar: 4, deck: 'A', ctrl: 'fader', to: 0, label: '前一首的推子一把拉下', why: '尾巴还在响，像甩出去' },
+          { bar: 4, deck: 'B', ctrl: 'play', label: '同一拍按后一首的 PLAY', why: '后一首从高潮直接接上' },
           { bar: 6, deck: 'A', ctrl: 'echo', to: 0, label: '回声收掉', why: '收掉回声' },
         ],
       });
@@ -2043,11 +2053,11 @@ const Planner = (() => {
     const out = [];
     out.push({ k: '调性', v: `${A.key.camelot} → ${B.key.camelot}`, note: c.rel, good: c.keyScore >= 0.85 });
     const pct = c.bpmPct;
-    out.push({ k: '速度', v: `${A.bpm} → ${B.bpm}`, note: `B ${pct >= 0 ? '加快' : '放慢'} ${Math.abs(pct).toFixed(1)}%`, good: Math.abs(pct) <= 4 });
+    out.push({ k: '速度', v: `${A.bpm} → ${B.bpm}`, note: `后一首${pct >= 0 ? '加快' : '放慢'} ${Math.abs(pct).toFixed(1)}%`, good: Math.abs(pct) <= 4 });
     const swap = plans.find(p => p.id === 'swap');
-    out.push({ k: 'A 出口', v: `第 ${swap.startA} 小节`, note: `后面还有 ${A.nBars - swap.startA} 小节可混`, good: A.nBars - swap.startA >= 16 });
+    out.push({ k: '前一首出口', v: `第 ${swap.startA} 小节`, note: `后面还有 ${A.nBars - swap.startA} 小节可混`, good: A.nBars - swap.startA >= 16 });
     const intro = B.sections[0];
-    out.push({ k: 'B 入口', v: intro ? `${intro.end - intro.start} 小节前奏` : '无前奏', note: B.firstDrop != null ? `drop 在第 ${B.firstDrop} 小节` : '没找到明显 drop', good: !!intro && !intro.high });
+    out.push({ k: '后一首入口', v: intro ? `${intro.end - intro.start} 小节前奏` : '无前奏', note: B.firstDrop != null ? `drop 在第 ${B.firstDrop} 小节` : '没找到明显 drop', good: !!intro && !intro.high });
     return out;
   }
 
@@ -2057,7 +2067,7 @@ const Planner = (() => {
     const stepResults = p.steps.map(step => {
       const parts = step.actions.map(a => {
         if (a.ctrl === 'play') {
-          if (meta.bStartRel == null) return { a, score: 0, note: 'B 没放出来' };
+          if (meta.bStartRel == null) return { a, score: 0, note: '后一首没放出来' };
           const off = Math.round((meta.bStartRel - a.bar) * 4);
           const by = meta.bStartBy === 'ai' ? '（帮你按的）' : '';
           return { a, score: off === 0 ? (meta.bStartBy === 'ai' ? 0.5 : 1) : clamp(1 - Math.abs(off) / 4) * 0.7, note: (off === 0 ? '卡在乐句第一拍' : `${off > 0 ? '晚' : '早'}了 ${Math.abs(off)} 拍`) + by, off };
@@ -2131,14 +2141,16 @@ const Coach = (() => {
     else if (e && e.code === 'rate_limited') { state = 'busy'; emit(); setTimeout(() => { if (sample) { state = 'online'; emit(); } }, 30000); }
   }
 
-  const PERSONA = '你是 Segue 的 AI 混音教练：一位耐心、专业、说话口语化的俱乐部 DJ，正在教第一次接触打碟的新手。只用中文回答，不用 Markdown 标题，不编造数据里没有的事实。';
+  const PERSONA = '你是 Segue 的 AI 混音教练：一位耐心、专业、说话口语化的俱乐部 DJ，正在教第一次接触打碟的新手。只用中文回答，不用 Markdown 标题，不编造数据里没有的事实。两首歌一律叫“前一首”和“后一首”，不要写 A、B 或 Deck。';
+  // whatever the model writes, the interface never calls a song by a letter
+  const noAB = s => typeof s === 'string' ? s.replace(/(^|[^A-Za-z0-9#♯])\s?(?:Deck\s?)?([AB])(?![A-Za-z0-9#♯♭])\s?/g, (m, pre, d) => pre + (d === 'A' ? '前一首' : '后一首')) : s;
 
   function summary(A, B, plan) {
     const sec = an => an.sections.map(s => `${s.type}:${s.start}-${s.end}`).join(' ');
     return {
-      A: { title: A.title, bpm: A.an.bpm, key: `${A.an.key.name} (${A.an.key.camelot})`, bars: A.an.nBars, sections: sec(A.an) },
-      B: { title: B.title, bpm: B.an.bpm, key: `${B.an.key.name} (${B.an.key.camelot})`, bars: B.an.nBars, sections: sec(B.an) },
-      plan: plan ? { id: plan.id, name: plan.name, bars: plan.len, steps: plan.steps.map(s => `第${s.bar}小节: ` + s.actions.map(a => `${a.deck} ${a.label}`).join(' + ')) } : undefined,
+      前一首: { title: A.title, bpm: A.an.bpm, key: `${A.an.key.name} (${A.an.key.camelot})`, bars: A.an.nBars, sections: sec(A.an) },
+      后一首: { title: B.title, bpm: B.an.bpm, key: `${B.an.key.name} (${B.an.key.camelot})`, bars: B.an.nBars, sections: sec(B.an) },
+      plan: plan ? { id: plan.id, name: plan.name, bars: plan.len, steps: plan.steps.map(s => `第${s.bar}小节: ` + s.actions.map(a => a.label).join(' + ')) } : undefined,
     };
   }
 
@@ -2146,8 +2158,8 @@ const Coach = (() => {
     if (!sample) return null;
     const data = {
       ...summary(A, B),
-      compat: { relation: planset.compat.rel, bpmChangeForB: `${planset.compat.bpmPct.toFixed(1)}%` },
-      plans: planset.plans.map(p => ({ id: p.id, name: `${p.name} ${p.en}`, difficulty: p.difficulty, bars: p.len, startsAtABar: p.startA, bEntersAtBar: p.cueB, ruleFit: p.fit, steps: p.steps.map(s => `+${s.bar}: ` + s.actions.map(a => `${a.deck} ${a.label}`).join(' / ')) })),
+      compat: { relation: planset.compat.rel, 后一首需要变速: `${planset.compat.bpmPct.toFixed(1)}%` },
+      plans: planset.plans.map(p => ({ id: p.id, name: `${p.name} ${p.en}`, difficulty: p.difficulty, bars: p.len, 前一首从第几小节开始混: p.startA, 后一首从它的第几小节进: p.cueB, ruleFit: p.fit, steps: p.steps.map(s => `+${s.bar}: ` + s.actions.map(a => a.label).join(' / ')) })),
     };
     const prompt = `${PERSONA}
 下面是浏览器本地分析两首歌得到的数据，以及规则引擎生成的 3 个可执行过渡方案（时间点已经算好，你不需要改）。
@@ -2158,6 +2170,8 @@ const Coach = (() => {
     try {
       const r = await sample.json(prompt, { modelTier: 'quick' });
       if (!r || !r.plans || !planset.plans.some(p => p.id === r.pick)) return null;
+      r.headline = noAB(r.headline);
+      Object.values(r.plans).forEach(x => { if (x) { x.why = noAB(x.why); x.pitfall = noAB(x.pitfall); } });
       return r;
     } catch (e) { fail(e); return null; }
   }
@@ -2168,8 +2182,8 @@ const Coach = (() => {
     const prompt = `${PERSONA}
 新手刚刚练完一次「${plan.name} ${plan.en}」过渡。下面是系统测到的结果（0-100）。
 用一句话点评，不超过 32 个字：先说听众会听到的最大问题，再给下一次一个具体动作。如果做得很好，就具体夸一处。只输出这一句，不要引号、编号或换行。
-数据：${JSON.stringify({ ...summary(A, B, plan), total: result.total, handedOverToB: result.handover, metrics: Object.fromEntries(Object.entries(m).map(([k, v]) => [Planner.METRIC_LABEL[k], Math.round(v * 100)])), lowClashBeats: +result.clashBeats.toFixed(1), worstBeatOffsetMs: Math.round(result.worstPhase), steps })}`;
-    try { return (await sample(prompt, { modelTier: 'quick', onText: onText ? ({ text }) => onText(text) : undefined })).text; }
+数据：${JSON.stringify({ ...summary(A, B, plan), total: result.total, 交接完成: result.handover, metrics: Object.fromEntries(Object.entries(m).map(([k, v]) => [Planner.METRIC_LABEL[k], Math.round(v * 100)])), lowClashBeats: +result.clashBeats.toFixed(1), worstBeatOffsetMs: Math.round(result.worstPhase), steps })}`;
+    try { return noAB((await sample(prompt, { modelTier: 'quick', onText: onText ? ({ text }) => onText(noAB(text)) : undefined })).text); }
     catch (e) { fail(e); return null; }
   }
 
@@ -2179,13 +2193,13 @@ const Coach = (() => {
 回答控制在 120 个字以内，能结合下面这两首歌的数据就结合。
 当前情境：${JSON.stringify(summary(A, B, plan))}`;
     const turns = history.map((t, i) => ({ role: t.role, content: i === 0 ? `${ctx}\n\n学员的问题：${t.content}` : t.content }));
-    try { return (await sample(turns, { modelTier: 'quick', cache: false, onText: ({ text }) => onText(text) })).text; }
+    try { return noAB((await sample(turns, { modelTier: 'quick', cache: false, onText: ({ text }) => onText(noAB(text)) })).text); }
     catch (e) { fail(e); return null; }
   }
 
   // ---------- offline words ----------
   const FAQ = [
-    { q: '为什么要在乐句开头进歌？', a: '电子乐几乎都按 8 小节、16 小节一组来写，鼓组变化、贝斯进场都发生在乐句开头。B 在 A 的乐句第一拍进来，两首歌的段落就会同时变化，听众感觉是一首歌在自然发展。早一拍或晚一拍进，段落就错开了，耳朵会觉得哪里不对。' },
+    { q: '为什么要在乐句开头进歌？', a: '电子乐几乎都按 8 小节、16 小节一组来写，鼓组变化、贝斯进场都发生在乐句开头。后一首在前一首的乐句第一拍进来，两首歌的段落就会同时变化，听众感觉是一首歌在自然发展。早一拍或晚一拍进，段落就错开了，耳朵会觉得哪里不对。' },
     { q: '低频打架是什么意思？', a: '底鼓和贝斯都挤在 200Hz 以下。两首歌的低频同时满开，底鼓会叠成"咚咚"两层，贝斯变浑，音响也容易过载。所以 DJ 的铁律是：同一时间只让一首歌拥有低频，用 LOW 旋钮在乐句点一出一进地交换。' },
     { q: 'SYNC 算作弊吗？', a: '不算。现在俱乐部里的播放器都带 SYNC，大部分职业 DJ 也会用。省下手动对拍的精力，可以花在选歌、乐句和 EQ 上，这些才是听众真正听得到的。等你熟了，再关掉 SYNC 用推子和 jog 盘练手动对拍，当作基本功。' },
     { q: '入门需要买什么设备？', a: '先什么都不用买。用电脑和键盘在 Segue 里练到能稳定完成一次长混，再考虑一台双通道的入门控制器，它和俱乐部设备的布局是一样的：两边播放、中间调音台。耳机可以晚点买，监听功能等你练到手动对拍时才用得上。' },
@@ -2193,9 +2207,9 @@ const Coach = (() => {
 
   function fallbackPlanCopy(p) {
     const map = {
-      swap: { why: '叠得久，在乐句头换低音，几乎听不出换歌。', pitfall: '忘关 B 的 LOW，一推就打架。' },
-      filter: { why: 'B 从高频里慢慢长出来，自带张力。', pitfall: '滤波转太快，没撑满 8 小节。' },
-      echo: { why: 'A 留个回声甩出去，B 的高潮直接补上。', pitfall: 'A 拉下和 B 起播没落在同一拍。' },
+      swap: { why: '叠得久，在乐句头换低音，几乎听不出换歌。', pitfall: '忘关后一首的 LOW，一推就打架。' },
+      filter: { why: '后一首从高频里慢慢长出来，自带张力。', pitfall: '滤波转太快，没撑满 8 小节。' },
+      echo: { why: '前一首留个回声甩出去，后一首的高潮直接补上。', pitfall: '前一首拉下和后一首起播没落在同一拍。' },
     };
     return map[p.id];
   }
@@ -2206,18 +2220,18 @@ const Coach = (() => {
     const earned = ks.filter(k => !(k === 'phrase' && result.aiStarted));
     const best = earned.reduce((a, b) => m[a] >= m[b] ? a : b), worst = ks.reduce((a, b) => m[a] <= m[b] ? a : b);
     const praise = m[best] < 0.6 ? '你完整走完了一次过渡，每一步在哪里已经心里有数。' : {
-      beat: '两首歌的鼓点一直对得很齐，SYNC 用对了。', phrase: 'B 正好卡在乐句第一拍进来，段落是对齐的。', bass: '低频交换很干净，全程几乎没有两层底鼓。',
+      beat: '两首歌的鼓点一直对得很齐，SYNC 用对了。', phrase: '后一首正好卡在乐句第一拍进来，段落是对齐的。', bass: '低频交换很干净，全程几乎没有两层底鼓。',
       level: '整段音量很稳，没有忽大忽小。', steps: '每个动作都按时间点完成了，手很稳。',
     }[best];
-    const fix = !result.handover ? '过渡结束时 B 还没完全接过来（或者 A 还没退场），听众会觉得两首歌卡在了一起。' : {
+    const fix = !result.handover ? '过渡结束时后一首还没完全接过来（或者前一首还没退场），听众会觉得两首歌卡在了一起。' : {
       beat: `鼓点最多错开了 ${Math.round(result.worstPhase)} 毫秒，听起来会像"马蹄声"。下次先按 SYNC 再起播。`,
-      phrase: 'B 没有在乐句第一拍进来，两首歌的段落错开了，听众会觉得节奏乱了一下。',
+      phrase: '后一首没有在乐句第一拍进来，两首歌的段落错开了，听众会觉得节奏乱了一下。',
       bass: `有大约 ${result.clashBeats.toFixed(1)} 拍两首歌的低频同时开着，底鼓会叠成两层、发闷。`,
       level: '中间有一段音量掉下去或冲太高，舞池会明显感觉到。', steps: '有几个动作没做到目标位置，过渡听起来会不完整。',
     }[worst];
-    const next = !result.handover ? '下次目标：先看一遍示范，记住 B 的推子什么时候推满。' : {
-      beat: '下次目标：起播前确认 B 的 BPM 和 A 一致。', phrase: '下次目标：看到“现在”就按 PLAY。',
-      bass: '下次目标：交换低频时两只手同时动，一拍内完成。', level: '下次目标：推 B 的时候，耳朵盯着总音量表。', steps: '下次目标：先看一遍示范，再跟着练。',
+    const next = !result.handover ? '下次目标：先看一遍示范，记住后一首的推子什么时候推满。' : {
+      beat: '下次目标：起播前确认后一首的 BPM 和前一首一致。', phrase: '下次目标：看到“现在”就按 PLAY。',
+      bass: '下次目标：交换低频时两只手同时动，一拍内完成。', level: '下次目标：推后一首的时候，耳朵盯着总音量表。', steps: '下次目标：先看一遍示范，再跟着练。',
     }[worst];
     return `· ${praise}\n· ${fix}\n· ${next}`;
   }
@@ -2312,7 +2326,7 @@ const Coach = (() => {
     const [mn, mx] = RANGES[a.ctrl] || [0, 1];
     const icon = a.ctrl === 'play' ? ICON.play : a.ctrl === 'sync' ? ICON.sync : a.ctrl === 'fader' ? ICON.fader(a.to) : ICON.knob((a.to - mn) / (mx - mn));
     const v = verb(a);
-    return `<span class="ins${mini ? ' mini' : ''}" title="${a.label || ''}"><b class="dk dk-${a.deck}">${a.deck}</b><i class="ic">${icon}</i><span class="ins-k">${CTRL_SHORT[a.ctrl]}</span>${v ? `<span class="ins-v">${v}</span>` : ''}${!mini && a.dur ? `<span class="ins-d">${a.dur} 小节</span>` : ''}</span>`;
+    return `<span class="ins${mini ? ' mini' : ''}" title="${a.label || ''}"><b class="dk dk-${a.deck}">${TAG[a.deck]}</b><i class="ic">${icon}</i><span class="ins-k">${CTRL_SHORT[a.ctrl]}</span>${v ? `<span class="ins-v">${v}</span>` : ''}${!mini && a.dur ? `<span class="ins-d">${a.dur} 小节</span>` : ''}</span>`;
   }
 
   function capsule(g, x, y, w, h, r) { g.beginPath(); if (g.roundRect) g.roundRect(x, y, w, h, Math.min(r, h / 2, w / 2)); else g.rect(x, y, w, h); }
@@ -2366,7 +2380,7 @@ const Coach = (() => {
       const [min, max, def] = RANGES[ctrl];
       Object.assign(this, { deck, ctrl, kind, min, max, def, value: ctrl === 'fader' && deck === 'B' ? 0 : def, ghost: null, active: false });
       this.el = h('div', { class: 'ctl ctl-' + kind });
-      const aria = { role: 'slider', tabindex: 0, 'aria-label': `${deck === 'X' ? '' : deck + ' '}${label}`, 'aria-valuemin': min, 'aria-valuemax': max };
+      const aria = { role: 'slider', tabindex: 0, 'aria-label': `${deck === 'X' ? '' : ROLE[deck] + ' '}${label}`, 'aria-valuemin': min, 'aria-valuemax': max };
       if (kind === 'knob') {
         this.face = h('div', { class: 'knob', ...aria });
         this.face.innerHTML = `<svg viewBox="-26 -26 52 52"><path class="trk" d="${arc(23.5, -135, 135)}"/><path class="val"/><circle class="cap" r="17"/><line class="ptr" x1="0" y1="-6" x2="0" y2="-13"/><circle class="gdot" r="3" cx="0" cy="-23.5" style="display:none"/></svg>`;
@@ -2433,7 +2447,7 @@ const Coach = (() => {
       if (c === 'low' || c === 'mid' || c === 'high') { const db = Engine.eqDb(v); return v < 0.02 ? 'KILL' : `${db > 0 ? '+' : ''}${db.toFixed(1)} dB`; }
       if (c === 'filter') { if (Math.abs(v) < 0.02) return 'OFF'; const hz = v < 0 ? Engine.lpfHz(v) : Engine.hpfHz(v); return `${v < 0 ? 'LPF' : 'HPF'} ${hz >= 1000 ? (hz / 1000).toFixed(1) + 'k' : Math.round(hz)}`; }
       if (c === 'tempo') return `${v >= 0 ? '+' : ''}${(v * 100).toFixed(1)}%`;
-      if (c === 'xf') return Math.abs(v - 0.5) < 0.01 ? 'CENTER' : `A ${Math.round(Math.min(1, (1 - v) * 2) * 100)} · B ${Math.round(Math.min(1, v * 2) * 100)}`;
+      if (c === 'xf') return Math.abs(v - 0.5) < 0.01 ? 'CENTER' : `前 ${Math.round(Math.min(1, (1 - v) * 2) * 100)} · 后 ${Math.round(Math.min(1, v * 2) * 100)}`;
       return `${Math.round(v * 100)}%`;
     }
     set(v) {
@@ -2545,8 +2559,10 @@ const Coach = (() => {
   }
 
   /* ================= view 1 · tracks ================= */
-  // on this page the two records are named by their part in the mix: the one playing first, the one coming in
-  const ROLE = { A: '先放', B: '后接' };
+  // nothing in the interface calls a song by a letter: they are the one before and the one after the mix,
+  // and a round badge carries the single character
+  const ROLE = { A: '前一首', B: '后一首' }, TAG = { A: '前', B: '后' };
+  const dk = (d, cls) => h('i', { class: `dk dk-${d}` + (cls ? ' ' + cls : '') }, TAG[d]);
   const roleTag = (d, sm) => h('i', { class: `role role-${d}` + (sm ? ' sm' : '') }, ROLE[d]);
   function trackCard(id) {
     const card = $('#track' + id), t = S.tracks[id];
@@ -2683,9 +2699,9 @@ const Coach = (() => {
     if (r.lib) loadLib(deck, r.id); else loadFile(deck, r.file, r.id);
   }
   function uploadBtn(id) {
-    const input = h('input', { type: 'file', accept: 'audio/*', 'aria-label': `为 Deck ${id} 选择音频文件` });
+    const input = h('input', { type: 'file', accept: 'audio/*', 'aria-label': `为${ROLE[id]}选择音频文件` });
     input.addEventListener('change', () => { if (input.files[0]) loadFile(id, input.files[0]); });
-    return h('label', { class: 'icon-btn file-btn', title: '换一首（也可以直接拖进这张卡片）', 'aria-label': `为 Deck ${id} 换一首歌`, html: ICON.upload }, input);
+    return h('label', { class: 'icon-btn file-btn', title: '换一首（也可以直接拖进这张卡片）', 'aria-label': `把${ROLE[id]}换掉`, html: ICON.upload }, input);
   }
   function setHead(id, sec) {
     const t = S.tracks[id], card = $('#track' + id);
@@ -2800,7 +2816,7 @@ const Coach = (() => {
     const t = S.tracks[id];
     Analysis.shiftDownbeat(t.an, beats);
     trackCard(id); refreshTracksUI();
-    toast(`Deck ${id} 小节线已${beats > 0 ? '右' : '左'}移一拍`);
+    toast(`小节线已${beats > 0 ? '右' : '左'}移一拍`);
   }
   function refreshTracksUI() {
     renderCompat();
@@ -2900,7 +2916,7 @@ const Coach = (() => {
   }
 
   /* ================= view 2 · plans ================= */
-  const PLAN_LINE = { swap: p => `两首叠 ${p.len} 小节，再换低音`, filter: () => 'B 慢慢变亮，A 慢慢变闷', echo: () => 'A 留个回声，B 直接进来' };
+  const PLAN_LINE = { swap: p => `两首叠 ${p.len} 小节，再换低音`, filter: () => '后一首慢慢变亮，前一首慢慢变闷', echo: () => '前一首留个回声，后一首直接进来' };
   const ARROW = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg>';
   function renderPlans(enter) {
     const ps = S.planset;
@@ -2911,7 +2927,7 @@ const Coach = (() => {
     const pending = Coach.state === 'online' && !ai && !S.aiPlansFailed;
     const pl = $('#pairLine');
     pl.innerHTML = '';
-    pl.append(h('i', { class: 'dk dk-A' }, 'A'), h('b', {}, A.title), h('span', { html: ARROW }), h('i', { class: 'dk dk-B' }, 'B'), h('b', {}, B.title),
+    pl.append(dk('A'), h('b', {}, A.title), h('span', { html: ARROW }), dk('B'), h('b', {}, B.title),
       h('span', {}, `· 契合度 ${ps.compat.overall} ·`), h('button', { class: 'linkbtn', onclick: () => go('tracks') }, '换歌'));
     const box = $('#plans'), hist = loadHist();
     box.innerHTML = '';
@@ -2986,9 +3002,9 @@ const Coach = (() => {
     return [
       h('div', { class: 'sc-over', 'aria-hidden': 'true' }, h('span', { class: 'band', style: `left:${pc(p.playBar)};width:${wd(p.playBar, outA)}` })),
       h('span'), h('div', { class: 'sc-ruler' }, ticks, hand ? h('span', { class: 'hand', style: `left:${pc(hand.bar)}` }, `第 ${hand.bar} 小节 · ${hand.ctrl === 'low' ? '换低音' : '交接'}`) : null),
-      h('i', { class: 'dk dk-A' }, 'A'), h('div', { class: 'sc-lane' }, lane(A, b => b - p.startA, x0, Math.min(x1, A.nBars - p.startA))),
+      dk('A'), h('div', { class: 'sc-lane' }, lane(A, b => b - p.startA, x0, Math.min(x1, A.nBars - p.startA))),
       h('span'), moves('A'),
-      h('i', { class: 'dk dk-B' }, 'B'), h('div', { class: 'sc-lane' }, lane(B, b => b - p.cueB + p.playBar, p.playBar, x1)),
+      dk('B'), h('div', { class: 'sc-lane' }, lane(B, b => b - p.cueB + p.playBar, p.playBar, x1)),
       h('span'), moves('B'),
       hand ? h('div', { class: 'sc-over', 'aria-hidden': 'true' }, h('span', { class: 'line', style: `left:${pc(hand.bar)}` })) : null,
     ].filter(Boolean);
@@ -3035,8 +3051,8 @@ const Coach = (() => {
     const ui = {};
     ui.title = h('div', { class: 't' }); ui.sub = h('div', { class: 's' });
     ui.cue = h('button', { class: 'tbtn cue', onclick: () => cuePressed(id), title: '停下时设置 CUE 点；播放时跳回 CUE 点' }, 'CUE');
-    ui.sync = h('button', { class: 'tbtn sync', onclick: () => syncPressed(id), title: id === 'B' && FINE ? '同步（S）' : '同步', 'aria-label': `同步 Deck ${id}`, html: ICON.sync.replace('<svg', '<svg width="20" height="20"') });
-    ui.play = h('button', { class: 'tbtn play', onclick: () => playPressed(id), title: id === 'B' && FINE ? '播放（空格）' : '播放', 'aria-label': `播放或暂停 Deck ${id}` });
+    ui.sync = h('button', { class: 'tbtn sync', onclick: () => syncPressed(id), title: id === 'B' && FINE ? '同步（S）' : '同步', 'aria-label': `同步${ROLE[id]}`, html: ICON.sync.replace('<svg', '<svg width="20" height="20"') });
+    ui.play = h('button', { class: 'tbtn play', onclick: () => playPressed(id), title: id === 'B' && FINE ? '播放（空格）' : '播放', 'aria-label': `播放或暂停${ROLE[id]}` });
     const k = (ctrl, label) => new Ctl(id, ctrl, 'knob', label).el;
     ui.vinyl = vinyl(id, {
       tap: () => playPressed(id),
@@ -3048,10 +3064,10 @@ const Coach = (() => {
         else if (!S.session) Engine.seek(d, clamp(Engine.pos(d) + da / 200, 0, d.an.duration - 0.1));
       },
       end: () => { const d = Engine.decks[id]; if (d.bend) Engine.setBend(d, 0); },
-    }, `Deck ${id}：点按播放或暂停，转动微调`);
+    }, `${ROLE[id]}：点按播放或暂停，转动微调`, true);
     deckUI[id] = ui;
-    return h('section', { class: 'deck', 'data-deck': id, 'aria-label': `Deck ${id}` },
-      h('div', { class: 'tt' }, ui.vinyl, h('div', { class: 'meta' }, ui.title, ui.sub)),
+    return h('section', { class: 'deck', 'data-deck': id, 'aria-label': ROLE[id] },
+      h('div', { class: 'tt' }, ui.vinyl, h('div', { class: 'meta' }, h('div', { class: 'tl' }, dk(id), ui.title), ui.sub)),
       h('div', { class: 'deck-main' },
         h('div', { class: 'deck-info' }, ui.cue, ui.sync, ui.play),
         h('div', { class: 'knobs' }, k('low', 'LOW'), k('mid', 'MID'), k('high', 'HIGH'), k('filter', 'FILTER'), k('echo', 'ECHO'), k('tempo', 'TEMPO'))));
@@ -3060,7 +3076,7 @@ const Coach = (() => {
   function mixerPanel() {
     const fader = id => new Ctl(id, 'fader', 'vf', '音量推子').el;
     const meter = id => { const i = h('i'); deckUI[id + 'meter'] = i; return h('u', {}, i); };
-    const row = id => { const i = h('i'); deckUI[id + 'low'] = i; return h('div', { class: 'low-row' }, h('span', {}, id), h('u', {}, i)); };
+    const row = id => { const i = h('i'); deckUI[id + 'low'] = i; return h('div', { class: 'low-row' }, h('span', {}, TAG[id]), h('u', {}, i)); };
     const low = h('div', { class: 'lowmeter', title: '两台同时亮满就是低频打架' }, h('span', {}, '低频占用'), row('A'), row('B'));
     deckUI.low = low;
     deckUI.phase = h('div', { class: 'phase idle' }, h('i'), h('span', {}, '还没对拍'));
@@ -3068,7 +3084,7 @@ const Coach = (() => {
     return h('section', { class: 'mixer', 'aria-label': '调音台' },
       h('div', { class: 'mx-faders' }, fader('A'), h('div', { class: 'mx-meters', 'aria-hidden': 'true' }, meter('A'), meter('B')), fader('B')),
       h('div', { class: 'mx-side' }, low, deckUI.phase,
-        h('div', { class: 'xfade' }, h('div', { class: 'ends' }, h('span', {}, 'A'), h('span', {}, 'B')), xf.el)));
+        h('div', { class: 'xfade' }, h('div', { class: 'ends' }, h('span', {}, TAG.A), h('span', {}, TAG.B)), xf.el)));
   }
 
   function playPressed(id) {
@@ -3138,7 +3154,7 @@ const Coach = (() => {
   }
   function updateStartBtn() {
     const b = $('#startBtn');
-    b.innerHTML = (S.session ? ICON.stop : ICON.play.replace('<svg', '<svg width="14" height="14"')) + (S.session ? '停止' : S.mode === 'free' ? (Engine.decks.A && Engine.decks.A.playing ? '暂停 A' : '播放 A') : S.mode === 'demo' ? '再看一遍' : S.drill ? '开始单练' : '开始');
+    b.innerHTML = (S.session ? ICON.stop : ICON.play.replace('<svg', '<svg width="14" height="14"')) + (S.session ? '停止' : S.mode === 'free' ? (Engine.decks.A && Engine.decks.A.playing ? '暂停前一首' : '播放前一首') : S.mode === 'demo' ? '再看一遍' : S.drill ? '开始单练' : '开始');
     b.classList.toggle('primary', !S.session);
     b.classList.toggle('quiet', !!S.session);
   }
@@ -3251,7 +3267,7 @@ const Coach = (() => {
     if (B.playing || s.bStartRel != null || rel < p.playBar + 1) return;
     catchUpB(p);
     s.bStartRel = p.playBar; s.bStartBy = 'ai';
-    toast('帮你按了 B 的 PLAY，这一步记一半分');
+    toast('帮你按了后一首的 PLAY，这一步记一半分');
   }
 
   function prepStatus(p) {
@@ -3306,7 +3322,7 @@ const Coach = (() => {
           unmet.forEach(x => { if (x.ctrl === 'sync') wanted.add('B.sync'); else ghosts.set(`${x.deck}.${x.ctrl}`, [x.to, true]); });
         } else {
           when = '准备好了 · 第一步'; what = steps[0].actions.map(a => ins(a)).join('');
-          why = s ? '' : 'A 先放 4 小节';
+          why = s ? '' : '前一首先放 4 小节';
         }
         cnt = countSVG(prep.filter(x => x.done).length / prep.length, `${prep.filter(x => x.done).length}/${prep.length}`, '准备', C.coach);
       } else if (idx === -1) {
@@ -3329,7 +3345,7 @@ const Coach = (() => {
         what = st.actions.map(a => ins(a)).join('');
         why = st.actions.map(a => a.why).filter(Boolean)[0] || '';
         const nx = steps[idx + 1];
-        if (nx) next = nx.actions.map(a => `${a.deck} ${CTRL_SHORT[a.ctrl]}${verb(a) ? ' ' + verb(a) : ''}`).join(' + ');
+        if (nx) next = nx.actions.map(a => `${ROLE[a.deck]} ${CTRL_SHORT[a.ctrl]}${verb(a) ? ' ' + verb(a) : ''}`).join(' + ');
         if (!demo) {
           for (const a of p.actions) {
             if (a.ctrl === 'play') { if (Math.abs(a.bar - rel) <= 2 && s && s.bStartRel == null) wanted.add('B.play'); continue; }
@@ -3338,10 +3354,10 @@ const Coach = (() => {
         }
         if (isPlay && !demo && beats <= 4 && beats > 0) alerts.push(['info', FINE ? '“现在”时按 PLAY（空格）' : '“现在”时按 PLAY']);
       }
-      if (s && s.bStartBy === 'ai') alerts.push(['info', '帮你按了 B']);
+      if (s && s.bStartBy === 'ai') alerts.push(['info', '帮你按了后一首']);
       if (s && s.bStartBy === 'user' && s.bStartRel != null) {
         const off = Math.round((s.bStartRel - p.playBar) * 4);
-        alerts.push(off === 0 ? ['good', 'B 进得准'] : ['hot', `B ${off > 0 ? '晚' : '早'}了 ${Math.abs(off)} 拍`]);
+        alerts.push(off === 0 ? ['good', '后一首进得准'] : ['hot', `后一首${off > 0 ? '晚' : '早'}了 ${Math.abs(off)} 拍`]);
       }
       if (demo) alerts.push(['info', '动旋钮即接手']);
       stepIdx = idx; stepN = steps.length;
@@ -3432,7 +3448,7 @@ const Coach = (() => {
       g.beginPath(); g.arc(18, y + laneH / 2, 12, 0, Math.PI * 2);
       g.fillStyle = id === 'A' ? C.text : C.card; g.fill();
       if (id === 'B') { g.strokeStyle = C.text; g.lineWidth = 1.5; g.stroke(); }
-      g.fillStyle = id === 'A' ? C.ink : C.text; g.font = `700 12px ${FONT}`; g.textAlign = 'center'; g.fillText(id, 18, y + laneH / 2 + 4); g.textAlign = 'left';
+      g.fillStyle = id === 'A' ? C.ink : C.text; g.font = `700 12px ${FONT}`; g.textAlign = 'center'; g.fillText(TAG[id], 18, y + laneH / 2 + 4); g.textAlign = 'left';
     });
     if (p) {
       // each move is a pill under its lane, starting on its bar; the one to do now is outlined
@@ -3552,7 +3568,7 @@ const Coach = (() => {
     rows.forEach((r, i) => {
       const y0 = top + i * rowH, [mn, mx] = RANGES[r.ctrl], Y = v => y0 + rowH - 6 - clamp((v - mn) / (mx - mn)) * (rowH - 12);
       g.fillStyle = alpha(C.text, 0.03); g.fillRect(L, y0 + 2, w - L - 8, rowH - 4);
-      g.fillStyle = deckColor(r.deck); g.font = `600 11px ${FONT}`; g.fillText(`${r.deck} ${NAME[r.ctrl]}`, 4, y0 + rowH / 2 + 4);
+      g.fillStyle = deckColor(r.deck); g.font = `600 11px ${FONT}`; g.fillText(`${TAG[r.deck]} ${NAME[r.ctrl]}`, 4, y0 + rowH / 2 + 4);
       g.strokeStyle = C.coach; g.lineWidth = 2; g.setLineDash([5, 4]); g.beginPath();
       for (let px = X(x0); px <= X(x1); px += 3) { const rel = x0 + (px - L) / (w - L - 8) * (x1 - x0), v = Planner.stateAt(p, rel)[r.deck][r.ctrl]; px === X(x0) ? g.moveTo(px, Y(v)) : g.lineTo(px, Y(v)); }
       g.stroke(); g.setLineDash([]);
@@ -3562,7 +3578,7 @@ const Coach = (() => {
       g.stroke();
     });
     const m = R.meta;
-    if (m.bStartRel != null) { const x = X(m.bStartRel); g.fillStyle = C['deck-b']; g.fillRect(x - 1, top - 4, 2, rows.length * rowH + 4); g.font = `500 10px ${FONT}`; g.fillText(m.bStartBy === 'ai' ? 'B 起播（帮你按的）' : 'B 起播', x + 4, top + rows.length * rowH + 14); }
+    if (m.bStartRel != null) { const x = X(m.bStartRel); g.fillStyle = C['deck-b']; g.fillRect(x - 1, top - 4, 2, rows.length * rowH + 4); g.font = `500 10px ${FONT}`; g.fillText(m.bStartBy === 'ai' ? '后一首起播（帮你按的）' : '后一首起播', x + 4, top + rows.length * rowH + 14); }
   }
 
   /* ================= navigation & boot ================= */
@@ -3670,7 +3686,7 @@ const Coach = (() => {
     [() => ICON.knob(0.8), 'ECHO', '回声：让声音拖着尾巴离开。'],
     [() => ICON.knob(0.5), 'TEMPO', '速度：调快调慢，让两首歌一样快。'],
     [() => ICON.fader(0.8), '推子', '这一台有多响。'],
-    [() => XF_ICON, '交叉推子', '在 A 和 B 之间分配音量。'],
+    [() => XF_ICON, '交叉推子', '在前一首和后一首之间分配音量。'],
     [() => ICON.play, 'PLAY', '开始或暂停这一台。'],
     [() => ICON.sync, 'SYNC', '一键把速度和拍子对齐另一台。'],
     [() => 'CUE', 'CUE', '停着时按，记下起点；播放中按，跳回起点。'],

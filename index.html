@@ -808,6 +808,16 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
 @media (hover: hover) and (pointer: fine) { .tour-skip:hover { background: var(--booth-2); color: var(--text); } }
 @media (prefers-reduced-transparency: reduce) { .tour-shade { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(0, 0, 0, 0.7); } }
 @media (prefers-reduced-motion: reduce) { .tour, .tour-card { transition: none; } .tour-shade, .tour-ring, .tour-card { animation: none; } }
+
+/* ---------- no letters anywhere: the two songs are 前一首 and 后一首, the round badge says 前 or 后 ---------- */
+.dk { font-size: 12px; font-weight: 600; }
+.dk.lg, .what .dk, .next-chip .dk { font-size: 16px; }
+.c-on .role.sm { padding: 0 8px; }
+.crate-cols, .crate-row { grid-template-columns: 52px minmax(0, 1fr) 56px 64px 56px 56px 56px; }
+#targetSeg button { min-width: 64px; }
+.deck .tt .tl { display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0; }
+.deck .tt .tl .t { min-width: 0; }
+@media (max-width: 900px) { .deck .tt .tl { justify-content: flex-start; } }
 </style>
 
 <header class="top">
@@ -841,8 +851,8 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
     <h3>快捷键</h3>
     <div class="keys">
       <span><kbd>Enter</kbd>开始 / 停止</span>
-      <span><kbd>空格</kbd>B 播放 / 暂停</span>
-      <span><kbd>S</kbd>B 同步到 A</span>
+      <span><kbd>空格</kbd>后一首播放 / 暂停</span>
+      <span><kbd>S</kbd>后一首对齐前一首</span>
       <span><kbd>↑</kbd><kbd>↓</kbd>微调选中的旋钮</span>
       <span><kbd>M</kbd>静音</span>
       <span><kbd>?</kbd>打开这页</span>
@@ -877,7 +887,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
       </div>
       <section class="crate" id="crate" aria-label="曲库">
         <div class="crate-head">
-          <div><h2>曲库</h2><span class="crate-pick">点一首放到<span class="seg" id="targetSeg" role="group" aria-label="换哪一张唱片"><button data-t="A" class="on">先放</button><button data-t="B">后接</button></span><span class="mouse-only">或拖到唱片上</span></span></div>
+          <div><h2>曲库</h2><span class="crate-pick">点一首放到<span class="seg" id="targetSeg" role="group" aria-label="换哪一张唱片"><button data-t="A" class="on">前一首</button><button data-t="B">后一首</button></span><span class="mouse-only">或拖到唱片上</span></span></div>
           <label class="btn sm quiet file-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>上传<input type="file" id="crateFile" accept="audio/*" multiple aria-label="上传自己的歌"></label>
         </div>
         <div class="crate-scroll">
@@ -980,7 +990,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
       </section>
       <section class="tile full compare" aria-label="这次过渡的回放">
         <h2>你 vs 谱</h2>
-        <div class="legend"><span><i style="border-color:var(--deck-a)"></i>你的 A</span><span><i style="border-color:var(--deck-b)"></i>你的 B</span><span><i style="border-color:var(--coach);border-top-style:dashed"></i>谱</span><span><i style="border-color:var(--hot);border-top-width:6px;opacity:.5"></i>低音打架</span></div>
+        <div class="legend"><span><i style="border-color:var(--deck-a)"></i>前一首</span><span><i style="border-color:var(--deck-b)"></i>后一首</span><span><i style="border-color:var(--coach);border-top-style:dashed"></i>谱</span><span><i style="border-color:var(--hot);border-top-width:6px;opacity:.5"></i>低音打架</span></div>
         <canvas id="compareCanvas"></canvas>
       </section>
       <section class="tile narrow metrics-tile" aria-label="五项评分"><h2>五项</h2><div class="metrics" id="metrics"></div></section>
