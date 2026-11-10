@@ -268,17 +268,30 @@
   }
   function stopAll() { if (!Engine.decks.A) return; Engine.stop(Engine.decks.A); Engine.stop(Engine.decks.B); }
 
+  /* A record with its tonearm is each deck's play control: the label carries the deck letter and turns at 33⅓ rpm
+     with the audio, and the arm sits on the groove the song has reached. */
+  function vinyl(id, onclick, label) {
+    return h('button', { class: `vinyl vy-${id}`, 'aria-label': label, title: label, disabled: !onclick, onclick: onclick || (() => {}) },
+      h('span', { class: 'disc' }, h('span', { class: 'lbl' }, id)), h('span', { class: 'arm', 'aria-hidden': 'true' }, h('i')));
+  }
+  function spinVinyl(el, sec, playing, progress) {
+    if (!el) return;
+    el.firstChild.style.transform = `rotate(${((sec * 200) % 360).toFixed(1)}deg)`;
+    const arm = playing ? (18 + 20 * clamp(progress)).toFixed(1) : '0';
+    if (el._arm !== arm) { el._arm = arm; el.style.setProperty('--arm', arm + 'deg'); el.classList.toggle('on', playing); el.setAttribute('aria-pressed', playing); }
+  }
+
   /* ================= view 1 · tracks ================= */
   function trackCard(id) {
     const card = $('#track' + id), t = S.tracks[id];
     card.innerHTML = '';
     const ready = t && t.status === 'ready', an = ready ? t.an : null;
     card.append(h('div', { class: 'track-head' },
-      h('i', { class: `dk lg dk-${id}`, 'aria-label': `Deck ${id}` }, id),
+      vinyl(id, ready ? () => togglePreview(id) : null, `试听 ${id}`),
       h('div', { class: 'track-info' },
         h('div', { class: 'track-title' }, t && t.title ? t.title : '还没有歌'),
         h('div', { class: 'track-sub' }, ready ? `${an.bpm} BPM · ${an.key.name} · ${an.key.camelot}${t.lib ? ' · ' + libOf(t.lib).genre : ''}` : t ? t.step || '准备中' : '从曲库里挑一首')),
-      ready ? h('button', { class: 'play-btn', 'data-preview': id, 'aria-label': `试听 ${id}`, onclick: () => togglePreview(id) }) : null));
+      ));
     if (!ready) {
       if (t && t.error) card.append(h('div', { class: 'loading' }, h('div', { class: 'track-err' }, h('span', {}, t.error), h('button', { class: 'btn sm quiet', onclick: () => loadDemo(id) }, '先用示例曲'))));
       // the loading card has the shape of the finished one, so nothing jumps when the song arrives
@@ -297,7 +310,7 @@
     bindScrub(strip, id);
     card.append(h('div', { class: 'track-foot' },
       h('span', { class: 'track-time' }, h('span', { 'data-now': '' }), h('small', {}, ` / ${fmtTime(an.duration)}`)),
-      h('span', { class: 'track-hint' }, '点一段，从那里开始听'),
+      h('span', { class: 'track-hint' }, '点唱片试听'),
       h('div', { class: 'grid-fix', title: '第一拍没对上？挪一拍' }, '对拍',
         h('button', { 'aria-label': '小节线左移一拍', onclick: () => nudgeGrid(id, -1), html: ICON.chev(-1) }),
         h('button', { 'aria-label': '小节线右移一拍', onclick: () => nudgeGrid(id, 1), html: ICON.chev(1) }))));
@@ -475,7 +488,7 @@
     const ready = ['A', 'B'].every(k => S.tracks[k] && S.tracks[k].status === 'ready');
     $('#toPlans').disabled = !ready;
     $('#heroDemo').disabled = !ready;
-    $('#heroDemoTxt').textContent = ready ? '先听示范' : ['A', 'B'].some(k => S.tracks[k] && S.tracks[k].status === 'error') ? '先换一首' : '准备中…';
+    $('#heroDemoTxt').textContent = ready ? '听示范' : ['A', 'B'].some(k => S.tracks[k] && S.tracks[k].status === 'error') ? '先换一首' : '准备中…';
     S.drill = null;
     renderCrate();
     // any change to the songs invalidates everything downstream of them
@@ -517,7 +530,7 @@
     setHead(id, t);
   }
   function previewButtons() {
-    ['A', 'B'].forEach(id => { const b = $(`#track${id} [data-preview]`); if (b) b.innerHTML = S.preview === id ? ICON.pause.replace('<svg', '<svg width="18" height="18"') : ICON.play.replace('<svg', '<svg width="18" height="18"'); });
+    ['A', 'B'].forEach(id => { const v = $(`#track${id} .vinyl`), t = S.tracks[id]; if (v && t && t.an) spinVinyl(v, t.head || 0, S.preview === id, (t.head || 0) / t.an.duration); });
   }
   // The structure bar is the scrubber: a tap plays the section under the finger, a drag sets the exact spot.
   function bindScrub(strip, id) {
@@ -592,7 +605,7 @@
         h('span', { class: 'plan-meta' },
           h('span', {}, `${p.len} 小节`),
           h('span', { class: 'dots', 'aria-label': `难度 ${p.difficulty} / 3` }, ...[1, 2, 3].map(n => h('i', { class: n <= p.difficulty ? 'on' : '' }))),
-          h('span', { class: 'best' }, best != null ? `练过 ${mine.length} 次 · 最好 ${best}` : '还没练过'))));
+          h('span', { class: 'best' }, best != null ? `最好 ${best}` : ''))));
     });
     paintPick(S.picked);
     if (enter) { const show = () => $$('.plan.pre', box).forEach(e => e.classList.remove('pre')); requestAnimationFrame(() => requestAnimationFrame(show)); setTimeout(show, 80); setTimeout(() => $$('.plan', box).forEach(e => { e.style.transitionDelay = ''; }), 700); }
@@ -615,7 +628,7 @@
     $('#barName').textContent = p.name;
     $('#barLine').textContent = PLAN_LINE[p.id](p);
     $('#barMeta').textContent = `${p.len} 小节 · 约 ${Math.round(p.len * 240 / S.tracks.A.an.bpm)} 秒 · ${p.actions.length} 个动作`;
-    $('#whoSays').textContent = id !== pickId ? '' : ai ? 'Claude 推荐这一种。' : pending ? 'Claude 正在看这两首歌…' : p.tempoGap ? '两首速度差得多，推荐这一种。' : '推荐这一种。';
+    $('#whoSays').textContent = id !== pickId ? '' : ai ? 'Claude 推荐。' : pending ? 'Claude 在看…' : p.tempoGap ? '速度差得多，推荐这种。' : '推荐。';
     $('#claudeLine').classList.toggle('ai', !!ai);
     $('#barWhy').textContent = copy.why;
     $('#barPit').textContent = copy.pitfall || '';
@@ -664,6 +677,7 @@
 
   function askPanel(box) {
     box.innerHTML = '';
+    box.classList.remove('open');
     const log = h('div', { class: 'ask-log', 'aria-live': 'polite' });
     const input = h('input', { id: box.id + 'Input', placeholder: '问教练任何问题', 'aria-label': '问教练' });
     let busy = false;
@@ -685,7 +699,7 @@
       busy = false;
     };
     box.append(
-      h('h2', {}, '问教练'),
+      h('button', { class: 'btn sm quiet ask-toggle', 'aria-expanded': 'false', onclick: e => { const o = box.classList.toggle('open'); e.currentTarget.setAttribute('aria-expanded', o); } }, '问教练'),
       h('div', { class: 'ask-chips' }, ...Coach.FAQ.map(f => h('button', { onclick: () => send(f.q) }, f.q))),
       Coach.state === 'online' ? h('form', { onsubmit: e => { e.preventDefault(); send(input.value); } }, input, h('button', { class: 'btn', type: 'submit', 'aria-label': '发送' }, '发送')) : '',
       log);
@@ -705,10 +719,13 @@
     ui.sync = h('button', { class: 'tbtn sync', onclick: () => syncPressed(id), title: id === 'B' && FINE ? '同步（S）' : '同步', 'aria-label': `同步 Deck ${id}`, html: ICON.sync.replace('<svg', '<svg width="20" height="20"') });
     ui.play = h('button', { class: 'tbtn play', onclick: () => playPressed(id), title: id === 'B' && FINE ? '播放（空格）' : '播放', 'aria-label': `播放或暂停 Deck ${id}` });
     const k = (ctrl, label) => new Ctl(id, ctrl, 'knob', label).el;
+    ui.vinyl = vinyl(id, () => playPressed(id), `播放或暂停 Deck ${id}`);
     deckUI[id] = ui;
     return h('section', { class: 'deck', 'data-deck': id, 'aria-label': `Deck ${id}` },
-      h('div', { class: 'deck-info' }, h('i', { class: `dk lg dk-${id}` }, id), h('div', { class: 'meta' }, ui.title, ui.sub), ui.cue, ui.sync, ui.play),
-      h('div', { class: 'knobs' }, k('low', 'LOW'), k('mid', 'MID'), k('high', 'HIGH'), k('filter', 'FILTER'), k('echo', 'ECHO'), k('tempo', 'TEMPO')));
+      h('div', { class: 'tt' }, ui.vinyl, h('div', { class: 'meta' }, ui.title, ui.sub)),
+      h('div', { class: 'deck-main' },
+        h('div', { class: 'deck-info' }, ui.cue, ui.sync, ui.play),
+        h('div', { class: 'knobs' }, k('low', 'LOW'), k('mid', 'MID'), k('high', 'HIGH'), k('filter', 'FILTER'), k('echo', 'ECHO'), k('tempo', 'TEMPO'))));
   }
   // both channel faders live in the mixer, side by side with the level meters between them, as on real gear
   function mixerPanel() {
@@ -930,7 +947,7 @@
     const bothLow = Engine.deckLowShare(A) > 0.3 && Engine.deckLowShare(B) > 0.3;
     const phase = Engine.phaseErrorMs();
     deckUI.low.classList.toggle('clash', bothLow);
-    if (bothLow) alerts.push(['hot', '低频打架 · 关掉一边的 LOW']);
+    if (bothLow) alerts.push(['hot', '低音打架，关一边 LOW']);
     if (phase != null && Math.abs(phase) > 25 && Engine.deckLevel(A) > 0.05 && Engine.deckLevel(B) > 0.05) alerts.push(['hot', `鼓点错开 ${Math.round(Math.abs(phase))} ms，按 SYNC`]);
 
     let when = '', what = '', why = '', cnt = '', now = false, next = '';
@@ -943,7 +960,7 @@
     } else if (S.drill && !s) {
       const st = S.drill.step;
       when = `单练 · 第 ${st.bar} 小节`; what = st.actions.map(a => ins(a)).join('');
-      why = '按开始，从前几小节放起，台子会自动摆好';
+      why = '台子会自动摆好';
       cnt = countSVG(0, String(S.drill.to - S.drill.from), '小节', C.coach);
     } else {
       const prep = prepStatus(p);
@@ -960,7 +977,7 @@
           unmet.forEach(x => { if (x.ctrl === 'sync') wanted.add('B.sync'); else ghosts.set(`${x.deck}.${x.ctrl}`, [x.to, true]); });
         } else {
           when = '准备好了 · 第一步'; what = steps[0].actions.map(a => ins(a)).join('');
-          why = s ? '' : 'A 会先放 4 小节，你有时间准备';
+          why = s ? '' : 'A 先放 4 小节';
         }
         cnt = countSVG(prep.filter(x => x.done).length / prep.length, `${prep.filter(x => x.done).length}/${prep.length}`, '准备', C.coach);
       } else if (idx === -1) {
@@ -990,14 +1007,14 @@
             if (rel >= a.bar - 2 && rel <= a.bar + a.dur + 0.5) ghosts.set(`${a.deck}.${a.ctrl}`, [rel < a.bar ? a.to : Planner.stateAt(p, rel)[a.deck][a.ctrl], st.actions.includes(a)]);
           }
         }
-        if (isPlay && !demo && beats <= 4 && beats > 0) alerts.push(['info', FINE ? '看到“现在”就按 PLAY（空格）' : '看到“现在”就按 PLAY']);
+        if (isPlay && !demo && beats <= 4 && beats > 0) alerts.push(['info', FINE ? '“现在”时按 PLAY（空格）' : '“现在”时按 PLAY']);
       }
       if (s && s.bStartBy === 'ai') alerts.push(['info', '帮你按了 B']);
       if (s && s.bStartBy === 'user' && s.bStartRel != null) {
         const off = Math.round((s.bStartRel - p.playBar) * 4);
         alerts.push(off === 0 ? ['good', 'B 进得准'] : ['hot', `B ${off > 0 ? '晚' : '早'}了 ${Math.abs(off)} 拍`]);
       }
-      if (demo) alerts.push(['info', '动任意旋钮，换你来']);
+      if (demo) alerts.push(['info', '动旋钮即接手']);
       stepIdx = idx; stepN = steps.length;
     }
     const statusKey = JSON.stringify([stepIdx, stepN, alerts]);
@@ -1028,6 +1045,7 @@
       ui.title.textContent = t ? t.title : '—';
       if (!d.an) continue;
       const p = Engine.pos(d);
+      spinVinyl(ui.vinyl, p, d.playing, p / d.an.duration);
       ui.sub.textContent = `${Engine.bpmNow(d).toFixed(1)} BPM · ${fmtTime(p)}`;
       if (ui.play._on !== d.playing) {
         ui.play._on = d.playing;
@@ -1290,7 +1308,11 @@
       updateConsole(); coach(rel); drawLanes();
     } else if (S.view === 'tracks' && S.preview) {
       const d = Engine.decks[S.preview];
-      if (d.an) setHead(S.preview, S.scrub && S.scrub.id === S.preview ? S.scrub.t : Engine.pos(d));
+      if (d.an) {
+        const pos = S.scrub && S.scrub.id === S.preview ? S.scrub.t : Engine.pos(d);
+        setHead(S.preview, pos);
+        spinVinyl($(`#track${S.preview} .vinyl`), pos, true, pos / d.an.duration);
+      }
       if (!d.playing && !S.scrub) stopPreview();
     }
   }

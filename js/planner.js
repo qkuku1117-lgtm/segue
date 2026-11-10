@@ -37,12 +37,12 @@ const Planner = (() => {
           { deck: 'B', ctrl: 'fader', to: 0, label: 'B 的推子放在最下面' },
         ],
         actions: [
-          { bar: 0, deck: 'B', ctrl: 'play', label: '在 A 的新乐句第一拍按 B 的 PLAY', why: '乐句对乐句，两首歌的段落才会同时变化' },
-          { bar: 0, dur: half / 2, deck: 'B', ctrl: 'fader', to: 1, label: `${half / 2} 小节内慢慢把 B 推满`, why: 'B 现在只有中高频，慢慢推进来不会抢 A 的戏' },
-          { bar: half, deck: 'A', ctrl: 'low', to: 0, label: '交换低频：A 的 LOW 拧到底', why: '在新乐句交换低频，听众只会觉得歌变了，不会觉得乱' },
-          { bar: half, deck: 'B', ctrl: 'low', to: 0.5, label: '同时把 B 的 LOW 拧回 12 点', why: '同一拍里一出一进，低频永远只有一首' },
-          { bar: half + 4, dur: 4, deck: 'A', ctrl: 'high', to: 0.22, label: '把 A 的 HIGH 慢慢收到 9 点', why: '两套镲叠在一起会糊，先让 A 的镲退场' },
-          { bar: half + half / 2, dur: half / 2, deck: 'A', ctrl: 'fader', to: 0, label: `最后 ${half / 2} 小节把 A 拉下去`, why: 'A 只剩一点氛围了，让它自然淡出' },
+          { bar: 0, deck: 'B', ctrl: 'play', label: '在 A 的新乐句第一拍按 B 的 PLAY', why: '卡在乐句头，段落才对齐' },
+          { bar: 0, dur: half / 2, deck: 'B', ctrl: 'fader', to: 1, label: `${half / 2} 小节内慢慢把 B 推满`, why: 'B 还没低音，慢慢推不抢戏' },
+          { bar: half, deck: 'A', ctrl: 'low', to: 0, label: '交换低频：A 的 LOW 拧到底', why: '乐句头换低音，听着最顺' },
+          { bar: half, deck: 'B', ctrl: 'low', to: 0.5, label: '同时把 B 的 LOW 拧回 12 点', why: '一出一进，低音只留一首' },
+          { bar: half + 4, dur: 4, deck: 'A', ctrl: 'high', to: 0.22, label: '把 A 的 HIGH 慢慢收到 9 点', why: '两套镲会糊，A 先退' },
+          { bar: half + half / 2, dur: half / 2, deck: 'A', ctrl: 'fader', to: 0, label: `最后 ${half / 2} 小节把 A 拉下去`, why: 'A 自然淡出' },
         ],
       });
     }
@@ -59,12 +59,12 @@ const Planner = (() => {
           { deck: 'B', ctrl: 'fader', to: 0, label: 'B 的推子放在最下面' },
         ],
         actions: [
-          { bar: 0, deck: 'B', ctrl: 'play', label: '在 A 的新乐句第一拍按 B 的 PLAY', why: '高通下的 B 只剩镲和一点旋律' },
-          { bar: 0, dur: 4, deck: 'B', ctrl: 'fader', to: 1, label: '4 小节内推满 B', why: '只有高频，推满也不会和 A 打架' },
-          { bar: 4, dur: 8, deck: 'B', ctrl: 'filter', to: 0, label: '8 小节内把 B 的 FILTER 转回 12 点', why: '滤波慢慢打开，本身就是一段 build-up' },
+          { bar: 0, deck: 'B', ctrl: 'play', label: '在 A 的新乐句第一拍按 B 的 PLAY', why: 'B 现在只有高频' },
+          { bar: 0, dur: 4, deck: 'B', ctrl: 'fader', to: 1, label: '4 小节内推满 B', why: '只有高频，推满不打架' },
+          { bar: 4, dur: 8, deck: 'B', ctrl: 'filter', to: 0, label: '8 小节内把 B 的 FILTER 转回 12 点', why: '慢慢打开，就是一段铺垫' },
           { bar: 4, dur: 8, deck: 'A', ctrl: 'filter', to: -0.6, label: '同时 A 的 FILTER 往左拧到 8 点钟', why: 'A 变闷，把空间让给 B' },
-          { bar: 8, deck: 'A', ctrl: 'low', to: 0, label: 'A 的 LOW 拧到底', why: 'B 的低频快冒出来了，A 的先让出来' },
-          { bar: 12, dur: 4, deck: 'A', ctrl: 'fader', to: 0, label: '最后 4 小节拉下 A', why: 'B 已经完全打开，A 可以退场了' },
+          { bar: 8, deck: 'A', ctrl: 'low', to: 0, label: 'A 的 LOW 拧到底', why: 'B 的低音要来了，A 先让' },
+          { bar: 12, dur: 4, deck: 'A', ctrl: 'fader', to: 0, label: '最后 4 小节拉下 A', why: 'B 全开了，A 退场' },
         ],
       });
     }
@@ -82,11 +82,11 @@ const Planner = (() => {
           { deck: 'B', ctrl: 'fader', to: 1, label: 'B 的推子先推满（B 会从 drop 直接进来）' },
         ],
         actions: [
-          { bar: 2, dur: 2, deck: 'A', ctrl: 'filter', to: -0.35, label: 'A 的 FILTER 往左拧一点', why: '先让 A 变暗，提示听众要换歌了' },
-          { bar: 3, deck: 'A', ctrl: 'echo', to: 0.8, label: '最后一小节：打开 A 的 ECHO', why: '回声会把 A 的最后一拍拖出去' },
-          { bar: 4, deck: 'A', ctrl: 'fader', to: 0, label: 'A 的推子一把拉下', why: '回声尾巴还在响，听起来是甩出去而不是断掉' },
-          { bar: 4, deck: 'B', ctrl: 'play', label: '同一拍按 B 的 PLAY', why: 'B 直接从 drop 进来，能量无缝接上' },
-          { bar: 6, deck: 'A', ctrl: 'echo', to: 0, label: '回声收掉', why: '收尾，免得回声一直滚' },
+          { bar: 2, dur: 2, deck: 'A', ctrl: 'filter', to: -0.35, label: 'A 的 FILTER 往左拧一点', why: 'A 变暗，预告要换歌' },
+          { bar: 3, deck: 'A', ctrl: 'echo', to: 0.8, label: '最后一小节：打开 A 的 ECHO', why: '让最后一拍拖出尾巴' },
+          { bar: 4, deck: 'A', ctrl: 'fader', to: 0, label: 'A 的推子一把拉下', why: '尾巴还在响，像甩出去' },
+          { bar: 4, deck: 'B', ctrl: 'play', label: '同一拍按 B 的 PLAY', why: 'B 从高潮直接接上' },
+          { bar: 6, deck: 'A', ctrl: 'echo', to: 0, label: '回声收掉', why: '收掉回声' },
         ],
       });
     }
@@ -239,7 +239,7 @@ const Coach = (() => {
 下面是浏览器本地分析两首歌得到的数据，以及规则引擎生成的 3 个可执行过渡方案（时间点已经算好，你不需要改）。
 请判断：哪个方案最适合这位新手现在先练？并为每个方案写一句"为什么这样接好听"和一句"新手最容易犯的错"。
 只输出 JSON，不要任何其他文字：
-{"pick":"<方案 id>","headline":"<不超过 28 个字的推荐理由>","plans":{"<id>":{"why":"<不超过 40 个字>","pitfall":"<不超过 30 个字>"}}}
+{"pick":"<方案 id>","headline":"<不超过 16 个字的推荐理由>","plans":{"<id>":{"why":"<不超过 24 个字，口语>","pitfall":"<不超过 18 个字>"}}}
 数据：${JSON.stringify(data)}`;
     try {
       const r = await sample.json(prompt, { modelTier: 'quick' });
@@ -279,9 +279,9 @@ const Coach = (() => {
 
   function fallbackPlanCopy(p) {
     const map = {
-      swap: { why: '两首歌长时间叠在一起，低频在乐句点干净地换手，听众几乎察觉不到换歌。', pitfall: '忘了先把 B 的 LOW 关掉，一推上来低频就打架。' },
-      filter: { why: 'B 在高通里一点点长出来，本身就是一段上升的张力。', pitfall: '转滤波太快，8 小节的过程 2 小节就转完了。' },
-      echo: { why: '回声把 A 的最后一拍甩出去，B 的 drop 正好补上，干脆有力。', pitfall: 'A 拉下和 B 起播没落在同一拍，中间出现空拍。' },
+      swap: { why: '叠得久，在乐句头换低音，几乎听不出换歌。', pitfall: '忘关 B 的 LOW，一推就打架。' },
+      filter: { why: 'B 从高频里慢慢长出来，自带张力。', pitfall: '滤波转太快，没撑满 8 小节。' },
+      echo: { why: 'A 留个回声甩出去，B 的高潮直接补上。', pitfall: 'A 拉下和 B 起播没落在同一拍。' },
     };
     return map[p.id];
   }

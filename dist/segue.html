@@ -712,6 +712,49 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
   .track-hint { display: none; }
   .track-foot .grid-fix { margin-left: auto; }
 }
+
+/* ---------- the record and its tonearm ---------- */
+.vinyl { --vs: 64px; position: relative; flex: none; width: var(--vs); height: var(--vs); margin-right: calc(var(--vs) * 0.18); padding: 0; border-radius: 50%; isolation: isolate; cursor: pointer; transition: transform var(--dur-press) var(--ease-out), opacity var(--dur-ui) ease; }
+.vinyl:active:not(:disabled) { transform: scale(0.97); }
+.vinyl:disabled { cursor: default; opacity: .55; }
+.vinyl .disc { position: absolute; inset: 0; border-radius: 50%; background: repeating-radial-gradient(circle, #0b0b0c 0 1.5px, #1d1d1f 1.5px 2.5px); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 4px 14px rgba(0, 0, 0, 0.22); will-change: transform; }
+/* the light on the record stays where the lamp is while the grooves turn under it */
+.vinyl::after { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; background: conic-gradient(from 25deg, rgba(255,255,255,0) 0 9%, rgba(255,255,255,.2) 15%, rgba(255,255,255,0) 21% 59%, rgba(255,255,255,.14) 65%, rgba(255,255,255,0) 71%); -webkit-mask: radial-gradient(circle, transparent 0 33%, #000 34%); mask: radial-gradient(circle, transparent 0 33%, #000 34%); }
+.vinyl .lbl { position: absolute; inset: 31%; border-radius: 50%; display: grid; place-items: center; font-size: calc(var(--vs) * 0.2); font-weight: 700; line-height: 1; }
+.vinyl .lbl::before { content: ""; position: absolute; top: 7%; left: 50%; width: 2px; height: 14%; margin-left: -1px; border-radius: 1px; background: currentColor; opacity: .45; }
+.vy-A .lbl { background: #f5f5f7; color: #000000; }
+.vy-B .lbl { background: #0b0b0c; color: #f5f5f7; box-shadow: inset 0 0 0 2px #f5f5f7; }
+.vinyl .arm { position: absolute; z-index: 2; right: -14%; top: -6%; width: 12%; height: 12%; border-radius: 50%; background: var(--rail); box-shadow: inset 0 0 0 2px var(--dim); transform: rotate(var(--arm, 0deg)); transition: transform 700ms var(--ease-out); }
+.vinyl .arm i { position: absolute; left: 50%; top: 50%; width: max(2px, calc(var(--vs) * 0.03)); height: calc(var(--vs) * 0.62); margin-left: calc(max(2px, var(--vs) * 0.03) / -2); border-radius: 2px; background: var(--dim); }
+.vinyl .arm i::after { content: ""; position: absolute; left: 50%; bottom: -1px; width: calc(var(--vs) * 0.085); height: calc(var(--vs) * 0.14); margin-left: calc(var(--vs) * -0.0425); border-radius: 2px; background: var(--text); }
+@media (hover: hover) and (pointer: fine) { .vinyl:not(.on):not(:disabled):hover { --arm: 9deg !important; } }
+.track-head .vinyl { margin-right: 14px; }
+/* a turntable: the record with the song's name under it, the transport and tone controls beside it */
+.deck .tt { flex: none; width: calc(148px * 1.24); display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 8px; }
+.deck .tt .meta { width: 100%; text-align: center; }
+.deck .tt .t { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.deck .tt .s { margin-top: 1px; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.deck .deck-info { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); justify-items: center; gap: 8px; }
+.deck .vinyl { --vs: 148px; margin: 0 calc(148px * 0.12) 0 0; }
+.deck .vinyl::before { content: ""; position: absolute; z-index: -1; inset: -5%; border-radius: 50%; background: #232325; }
+.deck, .deck[data-deck="B"] { flex-direction: row; align-items: center; justify-content: flex-start; gap: 20px; }
+.deck[data-deck="B"] { flex-direction: row-reverse; }
+.deck-main { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 18px; align-self: stretch; }
+.deck .knobs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 8px; }
+.mx-faders { height: 200px; }
+.ask:not(.open) { padding: 0; background: none; }
+.ask:not(.open) .ask-chips, .ask:not(.open) form { display: none; }
+.ask-toggle { background: var(--booth); }
+.ask.open .ask-toggle { background: var(--card); }
+@media (max-width: 1100px) { .deck .vinyl { --vs: 116px; margin-right: calc(116px * 0.12); } .deck .tt { width: calc(116px * 1.24); } }
+/* narrow decks stack: the record and the song's name on one line, the controls under them */
+@media (max-width: 900px) {
+  .deck, .deck[data-deck="B"] { flex-direction: column; align-items: stretch; }
+  .deck .tt { width: auto; flex-direction: row; align-items: center; gap: 16px; padding: 0; }
+  .deck .tt .meta { text-align: left; min-width: 0; }
+  .deck .vinyl { --vs: 96px; margin-right: calc(96px * 0.16); }
+}
+@media (prefers-reduced-motion: reduce) { .vinyl .arm { transition: none; } }
 </style>
 
 </head>
@@ -771,7 +814,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
         <p class="eyebrow">AI 混音教练</p>
         <h1 id="slogan">两首歌，无缝接上。</h1>
       </div>
-      <p class="lede" id="heroLede"><span>挑两首歌放上 A 和 B。</span><span>AI 排出三种接法，再一步一步带你练会。</span></p>
+      <p class="lede" id="heroLede">挑两首歌，AI 教你接上。</p>
     </div>
     <div class="cols">
       <div class="tray pair" aria-label="这一对">
@@ -782,24 +825,24 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
         </div>
         <article class="track" data-deck="B" id="trackB"></article>
         <div class="pair-acts">
-          <button class="btn primary" id="toPlans" disabled>看看怎么接</button>
+          <button class="btn primary" id="toPlans" disabled>看接法</button>
           <button class="btn" id="heroDemo" disabled><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5.8v12.4l9.6-6.2z"/></svg><span id="heroDemoTxt">准备中…</span></button>
         </div>
       </div>
       <section class="crate" id="crate" aria-label="曲库">
         <div class="crate-head">
-          <div><h2>曲库</h2><span>6 首原创示例曲，浏览器现场合成</span></div>
-          <label class="btn sm quiet file-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>上传自己的歌<input type="file" id="crateFile" accept="audio/*" multiple aria-label="上传自己的歌"></label>
+          <div><h2>曲库</h2><span>6 首原创示例曲</span></div>
+          <label class="btn sm quiet file-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>上传<input type="file" id="crateFile" accept="audio/*" multiple aria-label="上传自己的歌"></label>
         </div>
         <div class="crate-scroll">
           <div class="crate-table">
-            <div class="crate-cols" aria-hidden="true"><span></span><span>歌曲</span><span>BPM</span><span>调</span><span>时长</span><span>和 A 契合</span><span>放到</span></div>
+            <div class="crate-cols" aria-hidden="true"><span></span><span>歌曲</span><span>BPM</span><span>调</span><span>时长</span><span>契合</span><span>放到</span></div>
             <div class="crate-rows" id="crateRows"></div>
           </div>
         </div>
         <p class="crate-note">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-          也可以把 MP3、WAV、M4A 直接拖进来。歌只在你的浏览器里分析，不会上传。
+          可直接拖入 MP3 · WAV · M4A　只在本机分析，不上传
         </p>
       </section>
     </div>
@@ -820,15 +863,15 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
         <div class="score-scroll"><div class="sc-grid" id="score"></div></div>
         <div class="score-foot">
           <p class="claude-line" id="claudeLine"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3.5l1.9 5.6 5.6 1.9-5.6 1.9L11 18.5l-1.9-5.6L3.5 11l5.6-1.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" fill="currentColor"/></svg><span><b id="whoSays"></b><span id="barWhy"></span></span></p>
-          <p class="pitfall"><b>新手最容易错：</b><span id="barPit"></span></p>
+          <p class="pitfall"><b>易错：</b><span id="barPit"></span></p>
         </div>
       </article>
       <div class="plans" id="plans"></div>
       <div class="plan-bar">
-        <div class="txt"><span>先看一遍，或者直接上手。示范中途动任何旋钮，就换你接手。</span></div>
+        <div class="txt"><span>示范时动任何旋钮，就换你接手</span></div>
         <div class="acts">
-          <button class="btn" id="demoBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5.8v12.4l9.6-6.2z"/></svg>先听示范</button>
-          <button class="btn primary" id="practiceBtn">开始练习</button>
+          <button class="btn" id="demoBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5.8v12.4l9.6-6.2z"/></svg>听示范</button>
+          <button class="btn primary" id="practiceBtn">开始练</button>
         </div>
       </div>
     </div>
@@ -838,7 +881,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
   <!-- 3 · practice -->
   <section class="view" id="view-practice" hidden>
     <div class="session-bar">
-      <div class="st"><h2 id="sessionTitle">练习</h2><button class="linkbtn" id="fullBtn" hidden>回到完整练习</button></div>
+      <div class="st"><h2 id="sessionTitle">练习</h2><button class="linkbtn" id="fullBtn" hidden>完整练</button></div>
       <div class="seg" role="tablist" aria-label="模式">
         <button data-mode="demo" role="tab">示范</button>
         <button data-mode="guide" role="tab" class="on">跟练</button>
@@ -887,11 +930,11 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
           <button class="btn" id="drillBtn" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 1 3 6.2M4 19v-4.5h4.5"/></svg><span id="drillTxt">只练这一步</span></button>
           <button class="btn link" id="watchBtn">看示范</button>
         </div>
-        <div class="next-links"><button class="linkbtn" id="otherBtn">换一种接法</button><button class="linkbtn" id="newSongsBtn">换两首歌</button></div>
+        <div class="next-links"><button class="linkbtn" id="otherBtn">换接法</button><button class="linkbtn" id="newSongsBtn">换歌</button></div>
       </section>
       <section class="tile full compare" aria-label="这次过渡的回放">
-        <h2>你的手，和谱上写的</h2>
-        <div class="legend"><span><i style="border-color:var(--deck-a)"></i>你的 A</span><span><i style="border-color:var(--deck-b)"></i>你的 B</span><span><i style="border-color:var(--coach);border-top-style:dashed"></i>谱</span><span><i style="border-color:var(--hot);border-top-width:6px;opacity:.5"></i>两套低音叠在一起</span></div>
+        <h2>你 vs 谱</h2>
+        <div class="legend"><span><i style="border-color:var(--deck-a)"></i>你的 A</span><span><i style="border-color:var(--deck-b)"></i>你的 B</span><span><i style="border-color:var(--coach);border-top-style:dashed"></i>谱</span><span><i style="border-color:var(--hot);border-top-width:6px;opacity:.5"></i>低音打架</span></div>
         <canvas id="compareCanvas"></canvas>
       </section>
       <section class="tile narrow metrics-tile" aria-label="五项评分"><h2>五项</h2><div class="metrics" id="metrics"></div></section>
@@ -1855,12 +1898,12 @@ const Planner = (() => {
           { deck: 'B', ctrl: 'fader', to: 0, label: 'B 的推子放在最下面' },
         ],
         actions: [
-          { bar: 0, deck: 'B', ctrl: 'play', label: '在 A 的新乐句第一拍按 B 的 PLAY', why: '乐句对乐句，两首歌的段落才会同时变化' },
-          { bar: 0, dur: half / 2, deck: 'B', ctrl: 'fader', to: 1, label: `${half / 2} 小节内慢慢把 B 推满`, why: 'B 现在只有中高频，慢慢推进来不会抢 A 的戏' },
-          { bar: half, deck: 'A', ctrl: 'low', to: 0, label: '交换低频：A 的 LOW 拧到底', why: '在新乐句交换低频，听众只会觉得歌变了，不会觉得乱' },
-          { bar: half, deck: 'B', ctrl: 'low', to: 0.5, label: '同时把 B 的 LOW 拧回 12 点', why: '同一拍里一出一进，低频永远只有一首' },
-          { bar: half + 4, dur: 4, deck: 'A', ctrl: 'high', to: 0.22, label: '把 A 的 HIGH 慢慢收到 9 点', why: '两套镲叠在一起会糊，先让 A 的镲退场' },
-          { bar: half + half / 2, dur: half / 2, deck: 'A', ctrl: 'fader', to: 0, label: `最后 ${half / 2} 小节把 A 拉下去`, why: 'A 只剩一点氛围了，让它自然淡出' },
+          { bar: 0, deck: 'B', ctrl: 'play', label: '在 A 的新乐句第一拍按 B 的 PLAY', why: '卡在乐句头，段落才对齐' },
+          { bar: 0, dur: half / 2, deck: 'B', ctrl: 'fader', to: 1, label: `${half / 2} 小节内慢慢把 B 推满`, why: 'B 还没低音，慢慢推不抢戏' },
+          { bar: half, deck: 'A', ctrl: 'low', to: 0, label: '交换低频：A 的 LOW 拧到底', why: '乐句头换低音，听着最顺' },
+          { bar: half, deck: 'B', ctrl: 'low', to: 0.5, label: '同时把 B 的 LOW 拧回 12 点', why: '一出一进，低音只留一首' },
+          { bar: half + 4, dur: 4, deck: 'A', ctrl: 'high', to: 0.22, label: '把 A 的 HIGH 慢慢收到 9 点', why: '两套镲会糊，A 先退' },
+          { bar: half + half / 2, dur: half / 2, deck: 'A', ctrl: 'fader', to: 0, label: `最后 ${half / 2} 小节把 A 拉下去`, why: 'A 自然淡出' },
         ],
       });
     }
@@ -1877,12 +1920,12 @@ const Planner = (() => {
           { deck: 'B', ctrl: 'fader', to: 0, label: 'B 的推子放在最下面' },
         ],
         actions: [
-          { bar: 0, deck: 'B', ctrl: 'play', label: '在 A 的新乐句第一拍按 B 的 PLAY', why: '高通下的 B 只剩镲和一点旋律' },
-          { bar: 0, dur: 4, deck: 'B', ctrl: 'fader', to: 1, label: '4 小节内推满 B', why: '只有高频，推满也不会和 A 打架' },
-          { bar: 4, dur: 8, deck: 'B', ctrl: 'filter', to: 0, label: '8 小节内把 B 的 FILTER 转回 12 点', why: '滤波慢慢打开，本身就是一段 build-up' },
+          { bar: 0, deck: 'B', ctrl: 'play', label: '在 A 的新乐句第一拍按 B 的 PLAY', why: 'B 现在只有高频' },
+          { bar: 0, dur: 4, deck: 'B', ctrl: 'fader', to: 1, label: '4 小节内推满 B', why: '只有高频，推满不打架' },
+          { bar: 4, dur: 8, deck: 'B', ctrl: 'filter', to: 0, label: '8 小节内把 B 的 FILTER 转回 12 点', why: '慢慢打开，就是一段铺垫' },
           { bar: 4, dur: 8, deck: 'A', ctrl: 'filter', to: -0.6, label: '同时 A 的 FILTER 往左拧到 8 点钟', why: 'A 变闷，把空间让给 B' },
-          { bar: 8, deck: 'A', ctrl: 'low', to: 0, label: 'A 的 LOW 拧到底', why: 'B 的低频快冒出来了，A 的先让出来' },
-          { bar: 12, dur: 4, deck: 'A', ctrl: 'fader', to: 0, label: '最后 4 小节拉下 A', why: 'B 已经完全打开，A 可以退场了' },
+          { bar: 8, deck: 'A', ctrl: 'low', to: 0, label: 'A 的 LOW 拧到底', why: 'B 的低音要来了，A 先让' },
+          { bar: 12, dur: 4, deck: 'A', ctrl: 'fader', to: 0, label: '最后 4 小节拉下 A', why: 'B 全开了，A 退场' },
         ],
       });
     }
@@ -1900,11 +1943,11 @@ const Planner = (() => {
           { deck: 'B', ctrl: 'fader', to: 1, label: 'B 的推子先推满（B 会从 drop 直接进来）' },
         ],
         actions: [
-          { bar: 2, dur: 2, deck: 'A', ctrl: 'filter', to: -0.35, label: 'A 的 FILTER 往左拧一点', why: '先让 A 变暗，提示听众要换歌了' },
-          { bar: 3, deck: 'A', ctrl: 'echo', to: 0.8, label: '最后一小节：打开 A 的 ECHO', why: '回声会把 A 的最后一拍拖出去' },
-          { bar: 4, deck: 'A', ctrl: 'fader', to: 0, label: 'A 的推子一把拉下', why: '回声尾巴还在响，听起来是甩出去而不是断掉' },
-          { bar: 4, deck: 'B', ctrl: 'play', label: '同一拍按 B 的 PLAY', why: 'B 直接从 drop 进来，能量无缝接上' },
-          { bar: 6, deck: 'A', ctrl: 'echo', to: 0, label: '回声收掉', why: '收尾，免得回声一直滚' },
+          { bar: 2, dur: 2, deck: 'A', ctrl: 'filter', to: -0.35, label: 'A 的 FILTER 往左拧一点', why: 'A 变暗，预告要换歌' },
+          { bar: 3, deck: 'A', ctrl: 'echo', to: 0.8, label: '最后一小节：打开 A 的 ECHO', why: '让最后一拍拖出尾巴' },
+          { bar: 4, deck: 'A', ctrl: 'fader', to: 0, label: 'A 的推子一把拉下', why: '尾巴还在响，像甩出去' },
+          { bar: 4, deck: 'B', ctrl: 'play', label: '同一拍按 B 的 PLAY', why: 'B 从高潮直接接上' },
+          { bar: 6, deck: 'A', ctrl: 'echo', to: 0, label: '回声收掉', why: '收掉回声' },
         ],
       });
     }
@@ -2057,7 +2100,7 @@ const Coach = (() => {
 下面是浏览器本地分析两首歌得到的数据，以及规则引擎生成的 3 个可执行过渡方案（时间点已经算好，你不需要改）。
 请判断：哪个方案最适合这位新手现在先练？并为每个方案写一句"为什么这样接好听"和一句"新手最容易犯的错"。
 只输出 JSON，不要任何其他文字：
-{"pick":"<方案 id>","headline":"<不超过 28 个字的推荐理由>","plans":{"<id>":{"why":"<不超过 40 个字>","pitfall":"<不超过 30 个字>"}}}
+{"pick":"<方案 id>","headline":"<不超过 16 个字的推荐理由>","plans":{"<id>":{"why":"<不超过 24 个字，口语>","pitfall":"<不超过 18 个字>"}}}
 数据：${JSON.stringify(data)}`;
     try {
       const r = await sample.json(prompt, { modelTier: 'quick' });
@@ -2097,9 +2140,9 @@ const Coach = (() => {
 
   function fallbackPlanCopy(p) {
     const map = {
-      swap: { why: '两首歌长时间叠在一起，低频在乐句点干净地换手，听众几乎察觉不到换歌。', pitfall: '忘了先把 B 的 LOW 关掉，一推上来低频就打架。' },
-      filter: { why: 'B 在高通里一点点长出来，本身就是一段上升的张力。', pitfall: '转滤波太快，8 小节的过程 2 小节就转完了。' },
-      echo: { why: '回声把 A 的最后一拍甩出去，B 的 drop 正好补上，干脆有力。', pitfall: 'A 拉下和 B 起播没落在同一拍，中间出现空拍。' },
+      swap: { why: '叠得久，在乐句头换低音，几乎听不出换歌。', pitfall: '忘关 B 的 LOW，一推就打架。' },
+      filter: { why: 'B 从高频里慢慢长出来，自带张力。', pitfall: '滤波转太快，没撑满 8 小节。' },
+      echo: { why: 'A 留个回声甩出去，B 的高潮直接补上。', pitfall: 'A 拉下和 B 起播没落在同一拍。' },
     };
     return map[p.id];
   }
@@ -2404,17 +2447,30 @@ const Coach = (() => {
   }
   function stopAll() { if (!Engine.decks.A) return; Engine.stop(Engine.decks.A); Engine.stop(Engine.decks.B); }
 
+  /* A record with its tonearm is each deck's play control: the label carries the deck letter and turns at 33⅓ rpm
+     with the audio, and the arm sits on the groove the song has reached. */
+  function vinyl(id, onclick, label) {
+    return h('button', { class: `vinyl vy-${id}`, 'aria-label': label, title: label, disabled: !onclick, onclick: onclick || (() => {}) },
+      h('span', { class: 'disc' }, h('span', { class: 'lbl' }, id)), h('span', { class: 'arm', 'aria-hidden': 'true' }, h('i')));
+  }
+  function spinVinyl(el, sec, playing, progress) {
+    if (!el) return;
+    el.firstChild.style.transform = `rotate(${((sec * 200) % 360).toFixed(1)}deg)`;
+    const arm = playing ? (18 + 20 * clamp(progress)).toFixed(1) : '0';
+    if (el._arm !== arm) { el._arm = arm; el.style.setProperty('--arm', arm + 'deg'); el.classList.toggle('on', playing); el.setAttribute('aria-pressed', playing); }
+  }
+
   /* ================= view 1 · tracks ================= */
   function trackCard(id) {
     const card = $('#track' + id), t = S.tracks[id];
     card.innerHTML = '';
     const ready = t && t.status === 'ready', an = ready ? t.an : null;
     card.append(h('div', { class: 'track-head' },
-      h('i', { class: `dk lg dk-${id}`, 'aria-label': `Deck ${id}` }, id),
+      vinyl(id, ready ? () => togglePreview(id) : null, `试听 ${id}`),
       h('div', { class: 'track-info' },
         h('div', { class: 'track-title' }, t && t.title ? t.title : '还没有歌'),
         h('div', { class: 'track-sub' }, ready ? `${an.bpm} BPM · ${an.key.name} · ${an.key.camelot}${t.lib ? ' · ' + libOf(t.lib).genre : ''}` : t ? t.step || '准备中' : '从曲库里挑一首')),
-      ready ? h('button', { class: 'play-btn', 'data-preview': id, 'aria-label': `试听 ${id}`, onclick: () => togglePreview(id) }) : null));
+      ));
     if (!ready) {
       if (t && t.error) card.append(h('div', { class: 'loading' }, h('div', { class: 'track-err' }, h('span', {}, t.error), h('button', { class: 'btn sm quiet', onclick: () => loadDemo(id) }, '先用示例曲'))));
       // the loading card has the shape of the finished one, so nothing jumps when the song arrives
@@ -2433,7 +2489,7 @@ const Coach = (() => {
     bindScrub(strip, id);
     card.append(h('div', { class: 'track-foot' },
       h('span', { class: 'track-time' }, h('span', { 'data-now': '' }), h('small', {}, ` / ${fmtTime(an.duration)}`)),
-      h('span', { class: 'track-hint' }, '点一段，从那里开始听'),
+      h('span', { class: 'track-hint' }, '点唱片试听'),
       h('div', { class: 'grid-fix', title: '第一拍没对上？挪一拍' }, '对拍',
         h('button', { 'aria-label': '小节线左移一拍', onclick: () => nudgeGrid(id, -1), html: ICON.chev(-1) }),
         h('button', { 'aria-label': '小节线右移一拍', onclick: () => nudgeGrid(id, 1), html: ICON.chev(1) }))));
@@ -2611,7 +2667,7 @@ const Coach = (() => {
     const ready = ['A', 'B'].every(k => S.tracks[k] && S.tracks[k].status === 'ready');
     $('#toPlans').disabled = !ready;
     $('#heroDemo').disabled = !ready;
-    $('#heroDemoTxt').textContent = ready ? '先听示范' : ['A', 'B'].some(k => S.tracks[k] && S.tracks[k].status === 'error') ? '先换一首' : '准备中…';
+    $('#heroDemoTxt').textContent = ready ? '听示范' : ['A', 'B'].some(k => S.tracks[k] && S.tracks[k].status === 'error') ? '先换一首' : '准备中…';
     S.drill = null;
     renderCrate();
     // any change to the songs invalidates everything downstream of them
@@ -2653,7 +2709,7 @@ const Coach = (() => {
     setHead(id, t);
   }
   function previewButtons() {
-    ['A', 'B'].forEach(id => { const b = $(`#track${id} [data-preview]`); if (b) b.innerHTML = S.preview === id ? ICON.pause.replace('<svg', '<svg width="18" height="18"') : ICON.play.replace('<svg', '<svg width="18" height="18"'); });
+    ['A', 'B'].forEach(id => { const v = $(`#track${id} .vinyl`), t = S.tracks[id]; if (v && t && t.an) spinVinyl(v, t.head || 0, S.preview === id, (t.head || 0) / t.an.duration); });
   }
   // The structure bar is the scrubber: a tap plays the section under the finger, a drag sets the exact spot.
   function bindScrub(strip, id) {
@@ -2728,7 +2784,7 @@ const Coach = (() => {
         h('span', { class: 'plan-meta' },
           h('span', {}, `${p.len} 小节`),
           h('span', { class: 'dots', 'aria-label': `难度 ${p.difficulty} / 3` }, ...[1, 2, 3].map(n => h('i', { class: n <= p.difficulty ? 'on' : '' }))),
-          h('span', { class: 'best' }, best != null ? `练过 ${mine.length} 次 · 最好 ${best}` : '还没练过'))));
+          h('span', { class: 'best' }, best != null ? `最好 ${best}` : ''))));
     });
     paintPick(S.picked);
     if (enter) { const show = () => $$('.plan.pre', box).forEach(e => e.classList.remove('pre')); requestAnimationFrame(() => requestAnimationFrame(show)); setTimeout(show, 80); setTimeout(() => $$('.plan', box).forEach(e => { e.style.transitionDelay = ''; }), 700); }
@@ -2751,7 +2807,7 @@ const Coach = (() => {
     $('#barName').textContent = p.name;
     $('#barLine').textContent = PLAN_LINE[p.id](p);
     $('#barMeta').textContent = `${p.len} 小节 · 约 ${Math.round(p.len * 240 / S.tracks.A.an.bpm)} 秒 · ${p.actions.length} 个动作`;
-    $('#whoSays').textContent = id !== pickId ? '' : ai ? 'Claude 推荐这一种。' : pending ? 'Claude 正在看这两首歌…' : p.tempoGap ? '两首速度差得多，推荐这一种。' : '推荐这一种。';
+    $('#whoSays').textContent = id !== pickId ? '' : ai ? 'Claude 推荐。' : pending ? 'Claude 在看…' : p.tempoGap ? '速度差得多，推荐这种。' : '推荐。';
     $('#claudeLine').classList.toggle('ai', !!ai);
     $('#barWhy').textContent = copy.why;
     $('#barPit').textContent = copy.pitfall || '';
@@ -2800,6 +2856,7 @@ const Coach = (() => {
 
   function askPanel(box) {
     box.innerHTML = '';
+    box.classList.remove('open');
     const log = h('div', { class: 'ask-log', 'aria-live': 'polite' });
     const input = h('input', { id: box.id + 'Input', placeholder: '问教练任何问题', 'aria-label': '问教练' });
     let busy = false;
@@ -2821,7 +2878,7 @@ const Coach = (() => {
       busy = false;
     };
     box.append(
-      h('h2', {}, '问教练'),
+      h('button', { class: 'btn sm quiet ask-toggle', 'aria-expanded': 'false', onclick: e => { const o = box.classList.toggle('open'); e.currentTarget.setAttribute('aria-expanded', o); } }, '问教练'),
       h('div', { class: 'ask-chips' }, ...Coach.FAQ.map(f => h('button', { onclick: () => send(f.q) }, f.q))),
       Coach.state === 'online' ? h('form', { onsubmit: e => { e.preventDefault(); send(input.value); } }, input, h('button', { class: 'btn', type: 'submit', 'aria-label': '发送' }, '发送')) : '',
       log);
@@ -2841,10 +2898,13 @@ const Coach = (() => {
     ui.sync = h('button', { class: 'tbtn sync', onclick: () => syncPressed(id), title: id === 'B' && FINE ? '同步（S）' : '同步', 'aria-label': `同步 Deck ${id}`, html: ICON.sync.replace('<svg', '<svg width="20" height="20"') });
     ui.play = h('button', { class: 'tbtn play', onclick: () => playPressed(id), title: id === 'B' && FINE ? '播放（空格）' : '播放', 'aria-label': `播放或暂停 Deck ${id}` });
     const k = (ctrl, label) => new Ctl(id, ctrl, 'knob', label).el;
+    ui.vinyl = vinyl(id, () => playPressed(id), `播放或暂停 Deck ${id}`);
     deckUI[id] = ui;
     return h('section', { class: 'deck', 'data-deck': id, 'aria-label': `Deck ${id}` },
-      h('div', { class: 'deck-info' }, h('i', { class: `dk lg dk-${id}` }, id), h('div', { class: 'meta' }, ui.title, ui.sub), ui.cue, ui.sync, ui.play),
-      h('div', { class: 'knobs' }, k('low', 'LOW'), k('mid', 'MID'), k('high', 'HIGH'), k('filter', 'FILTER'), k('echo', 'ECHO'), k('tempo', 'TEMPO')));
+      h('div', { class: 'tt' }, ui.vinyl, h('div', { class: 'meta' }, ui.title, ui.sub)),
+      h('div', { class: 'deck-main' },
+        h('div', { class: 'deck-info' }, ui.cue, ui.sync, ui.play),
+        h('div', { class: 'knobs' }, k('low', 'LOW'), k('mid', 'MID'), k('high', 'HIGH'), k('filter', 'FILTER'), k('echo', 'ECHO'), k('tempo', 'TEMPO'))));
   }
   // both channel faders live in the mixer, side by side with the level meters between them, as on real gear
   function mixerPanel() {
@@ -3066,7 +3126,7 @@ const Coach = (() => {
     const bothLow = Engine.deckLowShare(A) > 0.3 && Engine.deckLowShare(B) > 0.3;
     const phase = Engine.phaseErrorMs();
     deckUI.low.classList.toggle('clash', bothLow);
-    if (bothLow) alerts.push(['hot', '低频打架 · 关掉一边的 LOW']);
+    if (bothLow) alerts.push(['hot', '低音打架，关一边 LOW']);
     if (phase != null && Math.abs(phase) > 25 && Engine.deckLevel(A) > 0.05 && Engine.deckLevel(B) > 0.05) alerts.push(['hot', `鼓点错开 ${Math.round(Math.abs(phase))} ms，按 SYNC`]);
 
     let when = '', what = '', why = '', cnt = '', now = false, next = '';
@@ -3079,7 +3139,7 @@ const Coach = (() => {
     } else if (S.drill && !s) {
       const st = S.drill.step;
       when = `单练 · 第 ${st.bar} 小节`; what = st.actions.map(a => ins(a)).join('');
-      why = '按开始，从前几小节放起，台子会自动摆好';
+      why = '台子会自动摆好';
       cnt = countSVG(0, String(S.drill.to - S.drill.from), '小节', C.coach);
     } else {
       const prep = prepStatus(p);
@@ -3096,7 +3156,7 @@ const Coach = (() => {
           unmet.forEach(x => { if (x.ctrl === 'sync') wanted.add('B.sync'); else ghosts.set(`${x.deck}.${x.ctrl}`, [x.to, true]); });
         } else {
           when = '准备好了 · 第一步'; what = steps[0].actions.map(a => ins(a)).join('');
-          why = s ? '' : 'A 会先放 4 小节，你有时间准备';
+          why = s ? '' : 'A 先放 4 小节';
         }
         cnt = countSVG(prep.filter(x => x.done).length / prep.length, `${prep.filter(x => x.done).length}/${prep.length}`, '准备', C.coach);
       } else if (idx === -1) {
@@ -3126,14 +3186,14 @@ const Coach = (() => {
             if (rel >= a.bar - 2 && rel <= a.bar + a.dur + 0.5) ghosts.set(`${a.deck}.${a.ctrl}`, [rel < a.bar ? a.to : Planner.stateAt(p, rel)[a.deck][a.ctrl], st.actions.includes(a)]);
           }
         }
-        if (isPlay && !demo && beats <= 4 && beats > 0) alerts.push(['info', FINE ? '看到“现在”就按 PLAY（空格）' : '看到“现在”就按 PLAY']);
+        if (isPlay && !demo && beats <= 4 && beats > 0) alerts.push(['info', FINE ? '“现在”时按 PLAY（空格）' : '“现在”时按 PLAY']);
       }
       if (s && s.bStartBy === 'ai') alerts.push(['info', '帮你按了 B']);
       if (s && s.bStartBy === 'user' && s.bStartRel != null) {
         const off = Math.round((s.bStartRel - p.playBar) * 4);
         alerts.push(off === 0 ? ['good', 'B 进得准'] : ['hot', `B ${off > 0 ? '晚' : '早'}了 ${Math.abs(off)} 拍`]);
       }
-      if (demo) alerts.push(['info', '动任意旋钮，换你来']);
+      if (demo) alerts.push(['info', '动旋钮即接手']);
       stepIdx = idx; stepN = steps.length;
     }
     const statusKey = JSON.stringify([stepIdx, stepN, alerts]);
@@ -3164,6 +3224,7 @@ const Coach = (() => {
       ui.title.textContent = t ? t.title : '—';
       if (!d.an) continue;
       const p = Engine.pos(d);
+      spinVinyl(ui.vinyl, p, d.playing, p / d.an.duration);
       ui.sub.textContent = `${Engine.bpmNow(d).toFixed(1)} BPM · ${fmtTime(p)}`;
       if (ui.play._on !== d.playing) {
         ui.play._on = d.playing;
@@ -3426,7 +3487,11 @@ const Coach = (() => {
       updateConsole(); coach(rel); drawLanes();
     } else if (S.view === 'tracks' && S.preview) {
       const d = Engine.decks[S.preview];
-      if (d.an) setHead(S.preview, S.scrub && S.scrub.id === S.preview ? S.scrub.t : Engine.pos(d));
+      if (d.an) {
+        const pos = S.scrub && S.scrub.id === S.preview ? S.scrub.t : Engine.pos(d);
+        setHead(S.preview, pos);
+        spinVinyl($(`#track${S.preview} .vinyl`), pos, true, pos / d.an.duration);
+      }
       if (!d.playing && !S.scrub) stopPreview();
     }
   }

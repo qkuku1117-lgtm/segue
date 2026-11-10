@@ -707,6 +707,49 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
   .track-hint { display: none; }
   .track-foot .grid-fix { margin-left: auto; }
 }
+
+/* ---------- the record and its tonearm ---------- */
+.vinyl { --vs: 64px; position: relative; flex: none; width: var(--vs); height: var(--vs); margin-right: calc(var(--vs) * 0.18); padding: 0; border-radius: 50%; isolation: isolate; cursor: pointer; transition: transform var(--dur-press) var(--ease-out), opacity var(--dur-ui) ease; }
+.vinyl:active:not(:disabled) { transform: scale(0.97); }
+.vinyl:disabled { cursor: default; opacity: .55; }
+.vinyl .disc { position: absolute; inset: 0; border-radius: 50%; background: repeating-radial-gradient(circle, #0b0b0c 0 1.5px, #1d1d1f 1.5px 2.5px); box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 4px 14px rgba(0, 0, 0, 0.22); will-change: transform; }
+/* the light on the record stays where the lamp is while the grooves turn under it */
+.vinyl::after { content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none; background: conic-gradient(from 25deg, rgba(255,255,255,0) 0 9%, rgba(255,255,255,.2) 15%, rgba(255,255,255,0) 21% 59%, rgba(255,255,255,.14) 65%, rgba(255,255,255,0) 71%); -webkit-mask: radial-gradient(circle, transparent 0 33%, #000 34%); mask: radial-gradient(circle, transparent 0 33%, #000 34%); }
+.vinyl .lbl { position: absolute; inset: 31%; border-radius: 50%; display: grid; place-items: center; font-size: calc(var(--vs) * 0.2); font-weight: 700; line-height: 1; }
+.vinyl .lbl::before { content: ""; position: absolute; top: 7%; left: 50%; width: 2px; height: 14%; margin-left: -1px; border-radius: 1px; background: currentColor; opacity: .45; }
+.vy-A .lbl { background: #f5f5f7; color: #000000; }
+.vy-B .lbl { background: #0b0b0c; color: #f5f5f7; box-shadow: inset 0 0 0 2px #f5f5f7; }
+.vinyl .arm { position: absolute; z-index: 2; right: -14%; top: -6%; width: 12%; height: 12%; border-radius: 50%; background: var(--rail); box-shadow: inset 0 0 0 2px var(--dim); transform: rotate(var(--arm, 0deg)); transition: transform 700ms var(--ease-out); }
+.vinyl .arm i { position: absolute; left: 50%; top: 50%; width: max(2px, calc(var(--vs) * 0.03)); height: calc(var(--vs) * 0.62); margin-left: calc(max(2px, var(--vs) * 0.03) / -2); border-radius: 2px; background: var(--dim); }
+.vinyl .arm i::after { content: ""; position: absolute; left: 50%; bottom: -1px; width: calc(var(--vs) * 0.085); height: calc(var(--vs) * 0.14); margin-left: calc(var(--vs) * -0.0425); border-radius: 2px; background: var(--text); }
+@media (hover: hover) and (pointer: fine) { .vinyl:not(.on):not(:disabled):hover { --arm: 9deg !important; } }
+.track-head .vinyl { margin-right: 14px; }
+/* a turntable: the record with the song's name under it, the transport and tone controls beside it */
+.deck .tt { flex: none; width: calc(148px * 1.24); display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 8px; }
+.deck .tt .meta { width: 100%; text-align: center; }
+.deck .tt .t { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.deck .tt .s { margin-top: 1px; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.deck .deck-info { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); justify-items: center; gap: 8px; }
+.deck .vinyl { --vs: 148px; margin: 0 calc(148px * 0.12) 0 0; }
+.deck .vinyl::before { content: ""; position: absolute; z-index: -1; inset: -5%; border-radius: 50%; background: #232325; }
+.deck, .deck[data-deck="B"] { flex-direction: row; align-items: center; justify-content: flex-start; gap: 20px; }
+.deck[data-deck="B"] { flex-direction: row-reverse; }
+.deck-main { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 18px; align-self: stretch; }
+.deck .knobs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 8px; }
+.mx-faders { height: 200px; }
+.ask:not(.open) { padding: 0; background: none; }
+.ask:not(.open) .ask-chips, .ask:not(.open) form { display: none; }
+.ask-toggle { background: var(--booth); }
+.ask.open .ask-toggle { background: var(--card); }
+@media (max-width: 1100px) { .deck .vinyl { --vs: 116px; margin-right: calc(116px * 0.12); } .deck .tt { width: calc(116px * 1.24); } }
+/* narrow decks stack: the record and the song's name on one line, the controls under them */
+@media (max-width: 900px) {
+  .deck, .deck[data-deck="B"] { flex-direction: column; align-items: stretch; }
+  .deck .tt { width: auto; flex-direction: row; align-items: center; gap: 16px; padding: 0; }
+  .deck .tt .meta { text-align: left; min-width: 0; }
+  .deck .vinyl { --vs: 96px; margin-right: calc(96px * 0.16); }
+}
+@media (prefers-reduced-motion: reduce) { .vinyl .arm { transition: none; } }
 </style>
 
 <header class="top">
@@ -764,7 +807,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
         <p class="eyebrow">AI 混音教练</p>
         <h1 id="slogan">两首歌，无缝接上。</h1>
       </div>
-      <p class="lede" id="heroLede"><span>挑两首歌放上 A 和 B。</span><span>AI 排出三种接法，再一步一步带你练会。</span></p>
+      <p class="lede" id="heroLede">挑两首歌，AI 教你接上。</p>
     </div>
     <div class="cols">
       <div class="tray pair" aria-label="这一对">
@@ -775,24 +818,24 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
         </div>
         <article class="track" data-deck="B" id="trackB"></article>
         <div class="pair-acts">
-          <button class="btn primary" id="toPlans" disabled>看看怎么接</button>
+          <button class="btn primary" id="toPlans" disabled>看接法</button>
           <button class="btn" id="heroDemo" disabled><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5.8v12.4l9.6-6.2z"/></svg><span id="heroDemoTxt">准备中…</span></button>
         </div>
       </div>
       <section class="crate" id="crate" aria-label="曲库">
         <div class="crate-head">
-          <div><h2>曲库</h2><span>6 首原创示例曲，浏览器现场合成</span></div>
-          <label class="btn sm quiet file-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>上传自己的歌<input type="file" id="crateFile" accept="audio/*" multiple aria-label="上传自己的歌"></label>
+          <div><h2>曲库</h2><span>6 首原创示例曲</span></div>
+          <label class="btn sm quiet file-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>上传<input type="file" id="crateFile" accept="audio/*" multiple aria-label="上传自己的歌"></label>
         </div>
         <div class="crate-scroll">
           <div class="crate-table">
-            <div class="crate-cols" aria-hidden="true"><span></span><span>歌曲</span><span>BPM</span><span>调</span><span>时长</span><span>和 A 契合</span><span>放到</span></div>
+            <div class="crate-cols" aria-hidden="true"><span></span><span>歌曲</span><span>BPM</span><span>调</span><span>时长</span><span>契合</span><span>放到</span></div>
             <div class="crate-rows" id="crateRows"></div>
           </div>
         </div>
         <p class="crate-note">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-          也可以把 MP3、WAV、M4A 直接拖进来。歌只在你的浏览器里分析，不会上传。
+          可直接拖入 MP3 · WAV · M4A　只在本机分析，不上传
         </p>
       </section>
     </div>
@@ -813,15 +856,15 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
         <div class="score-scroll"><div class="sc-grid" id="score"></div></div>
         <div class="score-foot">
           <p class="claude-line" id="claudeLine"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 3.5l1.9 5.6 5.6 1.9-5.6 1.9L11 18.5l-1.9-5.6L3.5 11l5.6-1.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" fill="currentColor"/></svg><span><b id="whoSays"></b><span id="barWhy"></span></span></p>
-          <p class="pitfall"><b>新手最容易错：</b><span id="barPit"></span></p>
+          <p class="pitfall"><b>易错：</b><span id="barPit"></span></p>
         </div>
       </article>
       <div class="plans" id="plans"></div>
       <div class="plan-bar">
-        <div class="txt"><span>先看一遍，或者直接上手。示范中途动任何旋钮，就换你接手。</span></div>
+        <div class="txt"><span>示范时动任何旋钮，就换你接手</span></div>
         <div class="acts">
-          <button class="btn" id="demoBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5.8v12.4l9.6-6.2z"/></svg>先听示范</button>
-          <button class="btn primary" id="practiceBtn">开始练习</button>
+          <button class="btn" id="demoBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8.5 5.8v12.4l9.6-6.2z"/></svg>听示范</button>
+          <button class="btn primary" id="practiceBtn">开始练</button>
         </div>
       </div>
     </div>
@@ -831,7 +874,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
   <!-- 3 · practice -->
   <section class="view" id="view-practice" hidden>
     <div class="session-bar">
-      <div class="st"><h2 id="sessionTitle">练习</h2><button class="linkbtn" id="fullBtn" hidden>回到完整练习</button></div>
+      <div class="st"><h2 id="sessionTitle">练习</h2><button class="linkbtn" id="fullBtn" hidden>完整练</button></div>
       <div class="seg" role="tablist" aria-label="模式">
         <button data-mode="demo" role="tab">示范</button>
         <button data-mode="guide" role="tab" class="on">跟练</button>
@@ -880,11 +923,11 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
           <button class="btn" id="drillBtn" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 1 3 6.2M4 19v-4.5h4.5"/></svg><span id="drillTxt">只练这一步</span></button>
           <button class="btn link" id="watchBtn">看示范</button>
         </div>
-        <div class="next-links"><button class="linkbtn" id="otherBtn">换一种接法</button><button class="linkbtn" id="newSongsBtn">换两首歌</button></div>
+        <div class="next-links"><button class="linkbtn" id="otherBtn">换接法</button><button class="linkbtn" id="newSongsBtn">换歌</button></div>
       </section>
       <section class="tile full compare" aria-label="这次过渡的回放">
-        <h2>你的手，和谱上写的</h2>
-        <div class="legend"><span><i style="border-color:var(--deck-a)"></i>你的 A</span><span><i style="border-color:var(--deck-b)"></i>你的 B</span><span><i style="border-color:var(--coach);border-top-style:dashed"></i>谱</span><span><i style="border-color:var(--hot);border-top-width:6px;opacity:.5"></i>两套低音叠在一起</span></div>
+        <h2>你 vs 谱</h2>
+        <div class="legend"><span><i style="border-color:var(--deck-a)"></i>你的 A</span><span><i style="border-color:var(--deck-b)"></i>你的 B</span><span><i style="border-color:var(--coach);border-top-style:dashed"></i>谱</span><span><i style="border-color:var(--hot);border-top-width:6px;opacity:.5"></i>低音打架</span></div>
         <canvas id="compareCanvas"></canvas>
       </section>
       <section class="tile narrow metrics-tile" aria-label="五项评分"><h2>五项</h2><div class="metrics" id="metrics"></div></section>
