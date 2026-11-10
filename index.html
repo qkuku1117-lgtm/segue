@@ -750,6 +750,27 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
   .deck .vinyl { --vs: 96px; margin-right: calc(96px * 0.16); }
 }
 @media (prefers-reduced-motion: reduce) { .vinyl .arm { transition: none; } }
+
+/* ---------- picking songs: tap a row for the chosen deck, or carry it onto a record ---------- */
+.crate-cols, .crate-row { grid-template-columns: 52px minmax(0, 1fr) 56px 64px 56px 56px 32px; }
+.crate-row { width: 100%; text-align: left; color: inherit; cursor: pointer; transition: background-color var(--dur-ui) ease, transform var(--dur-press) var(--ease-out), box-shadow var(--dur-ui) ease; }
+.crate-row:active { transform: scale(0.995); }
+.crate-row.on { box-shadow: inset 0 0 0 1px var(--rail); }
+@media (hover: hover) and (pointer: fine) { .crate-row:hover { background: var(--booth-2); } }
+.c-on { display: grid; place-items: center; }
+.c-on .dk { width: 28px; height: 28px; font-size: 12px; }
+.crate-pick { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--dim); }
+#targetSeg button { height: 32px; min-width: 40px; padding: 0 12px; font-weight: 700; }
+.pair .track { cursor: pointer; }
+.pair .track.target { box-shadow: inset 0 0 0 2px var(--text); }
+.pair .track.drop { box-shadow: inset 0 0 0 2px var(--coach); }
+.drag-ghost { position: fixed; left: 0; top: 0; z-index: 60; pointer-events: none; display: flex; align-items: center; gap: 10px; padding: 6px 16px 6px 6px; border-radius: 16px; background: var(--card); color: var(--text); box-shadow: 0 0 0 1px var(--hairline), 0 14px 36px rgba(0, 0, 0, 0.22); font-size: 15px; }
+.drag-ghost .lib-cover { width: 40px; height: 40px; border-radius: 10px; background: var(--booth); }
+.drag-ghost .lib-cover svg { width: 30px; height: 30px; }
+.dragging-song, .dragging-song * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
+.vinyl { touch-action: none; }
+.vinyl.held { cursor: grabbing; }
+.deck .vinyl, .track .vinyl { cursor: grab; }
 </style>
 
 <header class="top">
@@ -824,12 +845,12 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
       </div>
       <section class="crate" id="crate" aria-label="曲库">
         <div class="crate-head">
-          <div><h2>曲库</h2><span>6 首原创示例曲</span></div>
+          <div><h2>曲库</h2><span class="crate-pick">点一首放到<span class="seg" id="targetSeg" role="group" aria-label="放到哪一台"><button data-t="A" class="on">A</button><button data-t="B">B</button></span>或拖到唱片上</span></div>
           <label class="btn sm quiet file-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>上传<input type="file" id="crateFile" accept="audio/*" multiple aria-label="上传自己的歌"></label>
         </div>
         <div class="crate-scroll">
           <div class="crate-table">
-            <div class="crate-cols" aria-hidden="true"><span></span><span>歌曲</span><span>BPM</span><span>调</span><span>时长</span><span>契合</span><span>放到</span></div>
+            <div class="crate-cols" aria-hidden="true"><span></span><span>歌曲</span><span>BPM</span><span>调</span><span>时长</span><span>契合</span><span></span></div>
             <div class="crate-rows" id="crateRows"></div>
           </div>
         </div>

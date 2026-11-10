@@ -49,7 +49,7 @@
 
   const S = {
     view: 'tracks', tracks: { A: null, B: null }, planset: null, aiPlans: null, plan: null,
-    mode: 'guide', session: null, result: null, preview: null, cues: { A: 0, B: 0 }, chat: [], userFiles: [], drill: null,
+    mode: 'guide', session: null, result: null, preview: null, cues: { A: 0, B: 0 }, chat: [], userFiles: [], drill: null, target: 'A',
   };
   const SEC_LABEL = { intro: '前奏', verse: '主歌', pre: '预副歌', chorus: '副歌', drop: '高潮', break: '间奏', outro: '尾奏' };
   const secTier = type => type === 'drop' ? 1 : type === 'chorus' || type === 'pre' ? 2 : type === 'verse' || type === 'break' ? 3 : 4;
@@ -270,9 +270,40 @@
 
   /* A record with its tonearm is each deck's play control: the label carries the deck letter and turns at 33⅓ rpm
      with the audio, and the arm sits on the groove the song has reached. */
-  function vinyl(id, onclick, label) {
-    return h('button', { class: `vinyl vy-${id}`, 'aria-label': label, title: label, disabled: !onclick, onclick: onclick || (() => {}) },
+  function vinyl(id, o, label) {
+    const el = h('button', { class: `vinyl vy-${id}`, 'aria-label': label, title: label, disabled: !o },
       h('span', { class: 'disc' }, h('span', { class: 'lbl' }, id)), h('span', { class: 'arm', 'aria-hidden': 'true' }, h('i')));
+    if (!o) return el;
+    // a short press is a tap; anything that turns the record more than a few degrees is a hand on the platter
+    let g = null;
+    const done = cancelled => {
+      if (!g) return;
+      const was = g; g = null;
+      clearTimeout(was.idle); el.classList.remove('held');
+      if (was.turned > 6 || cancelled) { if (o.end) o.end(); } else o.tap();
+    };
+    el.addEventListener('pointerdown', e => {
+      const r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const ang = ev => Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180 / Math.PI;
+      g = { ang, a: ang(e), t: e.timeStamp, turned: 0 };
+      el.setPointerCapture(e.pointerId);
+    });
+    el.addEventListener('pointermove', e => {
+      if (!g) return;
+      let da = g.ang(e) - g.a;
+      if (da > 180) da -= 360; else if (da < -180) da += 360;
+      const dt = Math.max(1, e.timeStamp - g.t);
+      g.a += da; g.t = e.timeStamp; g.turned += Math.abs(da);
+      if (g.turned <= 6 || !o.turn) return;
+      el.classList.add('held');
+      o.turn(da, da / dt * 1000);
+      // a hand that holds still stops pushing
+      clearTimeout(g.idle); g.idle = setTimeout(() => { if (g) o.turn(0, 0); }, 90);
+    });
+    el.addEventListener('pointerup', () => done(false));
+    el.addEventListener('pointercancel', () => done(true));
+    el.addEventListener('click', e => { if (e.detail === 0) o.tap(); });
+    return el;
   }
   function spinVinyl(el, sec, playing, progress) {
     if (!el) return;
@@ -287,7 +318,21 @@
     card.innerHTML = '';
     const ready = t && t.status === 'ready', an = ready ? t.an : null;
     card.append(h('div', { class: 'track-head' },
-      vinyl(id, ready ? () => togglePreview(id) : null, `试听 ${id}`),
+      vinyl(id, ready ? {
+        tap: () => togglePreview(id),
+        // turning the record runs through the song: one turn is a few seconds
+        turn: da => {
+          const nt = clamp((S.scrub && S.scrub.id === id ? S.scrub.t : t.head) + da / 200 * 4, 0, an.duration - 0.1);
+          S.scrub = { id, t: nt };
+          setHead(id, nt);
+          spinVinyl($(`#track${id} .vinyl`), nt, S.preview === id, nt / an.duration);
+        },
+        end: () => {
+          const sc = S.scrub;
+          S.scrub = null;
+          if (sc && S.preview === id) Engine.seek(Engine.decks[id], sc.t);
+        },
+      } : null, `试听 ${id}`),
       h('div', { class: 'track-info' },
         h('div', { class: 'track-title' }, t && t.title ? t.title : '还没有歌'),
         h('div', { class: 'track-sub' }, ready ? `${an.bpm} BPM · ${an.key.name} · ${an.key.camelot}${t.lib ? ' · ' + libOf(t.lib).genre : ''}` : t ? t.step || '准备中' : '从曲库里挑一首')),
@@ -342,15 +387,54 @@
       const here = { A: on(A, r), B: on(B, r) };
       let fit = '—', good = false;
       if (!here.A && A && A.status === 'ready' && r.cmp) { const v = Analysis.compat(A.an, r.cmp).overall; fit = String(v); good = v >= 80; }
-      const btn = d => h('button', { class: `asg ${d.toLowerCase()}` + (here[d] ? ' on' : ''), 'aria-pressed': here[d], 'aria-label': `${here[d] ? '已在' : '放到'} ${d}：${r.title}`, title: here[d] ? `已在 ${d}` : `放到 ${d}`, onclick: () => assign(d, r) }, d);
-      box.append(h('div', { class: 'crate-row' },
+      const where = here.A ? 'A' : here.B ? 'B' : null;
+      const row = h('button', { class: 'crate-row' + (where ? ' on' : ''), 'aria-label': `${r.title}${where ? `，已在 ${where}` : ''}`, onclick: () => { if (row._dragged) { row._dragged = false; return; } assign(S.target, r); } },
         h('span', { class: 'lib-cover', html: r.cover }),
         h('span', { class: 'lib-main' }, h('b', {}, r.title), h('small', {}, r.meta)),
         h('span', { class: 'c-num' }, String(r.bpm)),
         h('span', { class: 'c-key' }, h('b', {}, r.cam), h('small', {}, r.key)),
         h('span', { class: 'c-dur' }, r.dur ? fmtTime(r.dur) : '—'),
         h('span', { class: 'c-fit' + (good ? ' good' : '') }, fit),
-        h('span', { class: 'c-asg' }, btn('A'), btn('B'))));
+        h('span', { class: 'c-on' }, where ? h('i', { class: `dk dk-${where}` }, where) : null));
+      dragRow(row, r);
+      box.append(row);
+    });
+    paintTarget();
+  }
+  // the deck a tapped song goes to; tapping a deck card or the A/B switch changes it
+  function setTarget(d) { S.target = d; paintTarget(); }
+  function paintTarget() {
+    ['A', 'B'].forEach(d => { $('#track' + d).classList.toggle('target', S.target === d); const b = $(`#targetSeg [data-t="${d}"]`); b.classList.toggle('on', S.target === d); b.setAttribute('aria-pressed', S.target === d); });
+    pill($('#targetSeg'));
+  }
+  // with a mouse a row can also be carried onto a record
+  function dragRow(row, r) {
+    row.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'touch' || e.button !== 0) return;
+      const x0 = e.clientX, y0 = e.clientY;
+      let ghost = null, over = null;
+      const deckAt = ev => { const el = document.elementFromPoint(ev.clientX, ev.clientY); const c = el && el.closest('.pair .track'); return c ? c.dataset.deck : null; };
+      const move = ev => {
+        if (!ghost) {
+          if (Math.hypot(ev.clientX - x0, ev.clientY - y0) < 8) return;
+          ghost = h('div', { class: 'drag-ghost', 'aria-hidden': 'true' }, h('span', { class: 'lib-cover', html: r.cover }), h('b', {}, r.title));
+          document.body.append(ghost);
+          document.body.classList.add('dragging-song');
+        }
+        ghost.style.transform = `translate(${ev.clientX + 12}px, ${ev.clientY + 12}px)`;
+        const d = deckAt(ev);
+        if (d !== over) { over = d; ['A', 'B'].forEach(k => $('#track' + k).classList.toggle('drop', k === d)); }
+      };
+      const up = ev => {
+        window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
+        if (!ghost) return;
+        ghost.remove(); document.body.classList.remove('dragging-song');
+        ['A', 'B'].forEach(k => $('#track' + k).classList.remove('drop'));
+        row._dragged = true; setTimeout(() => { row._dragged = false; }, 0);
+        const d = ev.type === 'pointerup' ? deckAt(ev) : null;
+        if (d) { setTarget(d); assign(d, r); }
+      };
+      window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
     });
   }
   function assign(deck, r) {
@@ -719,7 +803,17 @@
     ui.sync = h('button', { class: 'tbtn sync', onclick: () => syncPressed(id), title: id === 'B' && FINE ? '同步（S）' : '同步', 'aria-label': `同步 Deck ${id}`, html: ICON.sync.replace('<svg', '<svg width="20" height="20"') });
     ui.play = h('button', { class: 'tbtn play', onclick: () => playPressed(id), title: id === 'B' && FINE ? '播放（空格）' : '播放', 'aria-label': `播放或暂停 Deck ${id}` });
     const k = (ctrl, label) => new Ctl(id, ctrl, 'knob', label).el;
-    ui.vinyl = vinyl(id, () => playPressed(id), `播放或暂停 Deck ${id}`);
+    ui.vinyl = vinyl(id, {
+      tap: () => playPressed(id),
+      // a hand on a spinning record pushes it ahead or holds it back; on a stopped one it finds the spot
+      turn: (da, vel) => {
+        const d = Engine.decks[id];
+        if (!d.buffer) return;
+        if (d.playing) Engine.setBend(d, clamp(vel / 200 * 0.12, -0.12, 0.12));
+        else if (!S.session) Engine.seek(d, clamp(Engine.pos(d) + da / 200, 0, d.an.duration - 0.1));
+      },
+      end: () => { const d = Engine.decks[id]; if (d.bend) Engine.setBend(d, 0); },
+    }, `Deck ${id}：点按播放或暂停，转动微调`);
     deckUI[id] = ui;
     return h('section', { class: 'deck', 'data-deck': id, 'aria-label': `Deck ${id}` },
       h('div', { class: 'tt' }, ui.vinyl, h('div', { class: 'meta' }, ui.title, ui.sub)),
@@ -1405,8 +1499,10 @@
     try { th = localStorage.getItem('segue.theme') || 'auto'; } catch (e) { /* default */ }
     setTheme(THEMES.includes(th) ? th : 'auto', true);
     $('#themeBtn').addEventListener('click', () => setTheme(THEMES[(THEMES.indexOf($('#themeBtn').dataset.theme) + 1) % 3]));
-    const bring = files => { const n = [...files].map(addUserFile).length; if (n) { renderCrate(); toast(n > 1 ? `${n} 首歌进了曲库，点 A 或 B 放上去` : '进了曲库，点 A 或 B 放上去'); } };
+    const bring = files => { const n = [...files].map(addUserFile).length; if (n) { renderCrate(); toast(n > 1 ? `${n} 首歌进了曲库，点一下放上去` : '进了曲库，点一下放上去'); } };
     $('#crateFile').addEventListener('change', e => { bring(e.target.files); e.target.value = ''; });
+    $$('#targetSeg button').forEach(b => b.addEventListener('click', () => setTarget(b.dataset.t)));
+    ['A', 'B'].forEach(d => $('#track' + d).addEventListener('click', e => { if (!e.target.closest('button, .strip')) setTarget(d); }));
     const crate = $('#crate');
     crate.addEventListener('dragover', e => { e.preventDefault(); crate.classList.add('drag'); });
     crate.addEventListener('dragleave', () => crate.classList.remove('drag'));
