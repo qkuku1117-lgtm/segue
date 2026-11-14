@@ -112,6 +112,9 @@ const Engine = (() => {
     const d = decks[id] || (context(), decks[id]);
     stop(d);
     d.buffer = buffer; d.an = an; d.offset = 0; d.tempo = 0; d.bend = 0;
+    // auto gain, as on any DJ player: every song comes up at the same loudness (within 6 dB either way),
+    // so a fader at the same height means the same thing on both decks
+    d.trim.gain.value = an && an.loud > 0 ? Math.max(0.5, Math.min(2, 0.215 / an.loud)) : 1;
   }
   function play(d, when) {
     if (!d.buffer || d.playing) return;

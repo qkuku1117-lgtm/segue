@@ -1,7 +1,9 @@
 /* Segue · track analysis
  * Runs entirely in the browser: the audio never leaves the viewer's machine.
  * Produces a 3-band envelope (for waveforms), BPM + beat grid, downbeat,
- * 8-bar phrase sections and a musical key on the Camelot wheel. */
+ * 8-bar phrase sections and a musical key on the Camelot wheel.
+ * It also keeps what a DJ listens for before a mix, bar by bar: how much melody
+ * is playing, which notes, where the bass is, and how loud the song runs. */
 const Analysis = (() => {
   const ENV_SR = 22050, HOP = 256, HOP_SEC = HOP / ENV_SR;
   const NAMES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
@@ -34,9 +36,18 @@ const Analysis = (() => {
       }
       return out;
     });
+    // how loud the song runs when it is going: the 80th percentile of one-second RMS
+    const per = Math.max(1, Math.round(1 / HOP_SEC)), secs = [];
+    for (let i = 0; i + per <= frames; i += per) {
+      let s = 0;
+      for (let j = i; j < i + per; j++) s += env[0][j] ** 2 + env[1][j] ** 2 + env[2][j] ** 2;
+      secs.push(Math.sqrt(s / per));
+    }
+    secs.sort((a, b) => a - b);
+    const loud = secs.length ? secs[Math.floor(secs.length * 0.8)] : 0;
     const norm = arr => { let m = 0; for (const v of arr) m = Math.max(m, v); if (m > 0) for (let i = 0; i < arr.length; i++) arr[i] /= m; return m; };
     const peaks = env.map(norm);
-    return { low: env[0], mid: env[1], high: env[2], peaks };
+    return { low: env[0], mid: env[1], high: env[2], peaks, loud };
   }
 
   function onsetCurve(env) {
@@ -215,6 +226,8 @@ const Analysis = (() => {
       binW[k] = f < 150 ? 1.4 : 1; // bass notes say a lot about the tonic
     }
     const re = new Float32Array(N), im = new Float32Array(N), mag = new Float32Array(N / 2);
+    // frame by frame: how much melody (tonal peaks above the bass), on which notes, and the bass notes
+    const nF = Math.floor(d.length / N), mel = new Float32Array(nF), ch = new Float32Array(nF * 12), bs = new Float32Array(nF * 12);
     let frame = 0;
     for (let s = 0; s + N <= d.length; s += N) {
       for (let i = 0; i < N; i++) { re[i] = d[s + i] * win[i]; im[i] = 0; }
@@ -227,9 +240,10 @@ const Analysis = (() => {
         for (let j = k - 8; j <= k + 8; j++) loc += mag[j];
         loc /= 17;
         if (mag[k] < loc * 2.5) continue;
-        const m = mag[k] - loc;
+        const m = mag[k] - loc, f = k * sr / N;
         chroma[binPc[k]] += m * binW[k];
-        if (k * sr / N < 180) bassChroma[binPc[k]] += m;
+        if (f < 180) { bassChroma[binPc[k]] += m; bs[frame * 12 + binPc[k]] += m; }
+        else { ch[frame * 12 + binPc[k]] += m; if (f >= 220) mel[frame] += m; }
       }
       if (++frame % 40 === 0) await tick();
     }
@@ -250,7 +264,31 @@ const Analysis = (() => {
       if (rM + bonus > best.s) best = { s: rM + bonus, r: rM, tonic: t, minor: false };
       if (rm + bonus > best.s) best = { s: rm + bonus, r: rm, tonic: t, minor: true };
     }
-    return keyInfo(best.tonic, best.minor, best.r);
+    return { key: keyInfo(best.tonic, best.minor, best.r), tone: { dt: N / sr, n: nF, mel, ch, bs } };
+  }
+
+  // Fold the tonal frames onto the bar grid. Re-run whenever the downbeat moves.
+  function tonalBars(an) {
+    const T = an.tone, barSec = an.beat * 4, nBars = an.nBars;
+    const barMel = new Float32Array(nBars), barBass = new Float32Array(nBars), barCh = [], barBs = [];
+    for (let b = 0; b < nBars; b++) {
+      const f0 = Math.max(0, Math.round((an.down0 + b * barSec) / T.dt)), f1 = Math.min(T.n, Math.max(f0 + 1, Math.round((an.down0 + (b + 1) * barSec) / T.dt)));
+      const c = new Float32Array(12), s = new Float32Array(12);
+      let m = 0;
+      for (let f = f0; f < f1; f++) { m += T.mel[f]; for (let i = 0; i < 12; i++) { c[i] += T.ch[f * 12 + i]; s[i] += T.bs[f * 12 + i]; } }
+      let bass = 0;
+      for (let i = 0; i < 12; i++) bass += s[i];
+      barMel[b] = f1 > f0 ? m / (f1 - f0) : 0; barBass[b] = f1 > f0 ? bass / (f1 - f0) : 0; barCh.push(c); barBs.push(s);
+    }
+    // melody and bass line are judged against the fullest bars of the same song.
+    // A kick alone leaves no steady note down there, so barBass tells a bass line from a drum intro.
+    for (const arr of [barMel, barBass]) {
+      const sorted = Array.from(arr).sort((a, b) => a - b), ref = sorted[Math.floor(sorted.length * 0.9)] || 1e-9;
+      for (let b = 0; b < nBars; b++) arr[b] = Math.min(1, arr[b] / ref);
+    }
+    // a bass line that drops below the analysed range on some chords leaves one-bar holes: fill them
+    const filled = Float32Array.from(barBass, (v, b) => Math.max(v, Math.min(barBass[b - 1] ?? 0, barBass[b + 1] ?? 0)));
+    return { barMel, barBass: filled, barCh, barBs };
   }
 
   function keyInfo(tonic, minor, confidence = 1) {
@@ -271,15 +309,16 @@ const Analysis = (() => {
     await tick();
     onStep('识别调性');
     const k = await key(buffer);
-    return {
-      duration: buffer.duration, env, hopSec: HOP_SEC,
+    const an = {
+      duration: buffer.duration, env, hopSec: HOP_SEC, loud: env.loud,
       bpm: grid.bpm, beat: grid.beat, beatConfidence: grid.confidence, down0,
-      key: k, ...sec,
+      key: k.key, tone: k.tone, ...sec,
       barTime(bar) { return this.down0 + bar * this.beat * 4; },
       barAt(t) { return (t - this.down0) / (this.beat * 4); },
       lowAt(t) { const i = Math.floor(t / HOP_SEC); return i >= 0 && i < this.env.low.length ? this.env.low[i] : 0; },
       sectionAt(bar) { return this.sections.find(s => bar >= s.start && bar < s.end) || null; },
     };
+    return Object.assign(an, tonalBars(an));
   }
 
   // Re-derive bars and sections after the viewer nudges the downbeat by whole beats.
@@ -289,11 +328,15 @@ const Analysis = (() => {
     while (down0 < -0.01) down0 += 4 * an.beat;
     const sec = sections(an.env, { beat: an.beat }, down0, an.duration);
     Object.assign(an, { down0 }, sec);
+    if (an.tone) Object.assign(an, tonalBars(an));
     return an;
   }
 
   function compat(a, b) {
-    const ka = a.key, kb = b.key;
+    // There is no key lock on these decks: matching the tempo moves the pitch of the second song.
+    // 6% is a whole semitone, 3% lands between two keys.
+    const semis = 12 * Math.log2(a.bpm / b.bpm), shift = Math.round(semis), cents = Math.round((semis - shift) * 100);
+    const ka = a.key, kb = shift ? keyInfo(((b.key.tonic + shift) % 12 + 12) % 12, b.key.minor, b.key.confidence) : b.key;
     const diff = ((kb.num - ka.num) % 12 + 12) % 12;
     let rel, score;
     if (ka.num === kb.num && ka.letter === kb.letter) { rel = '同调'; score = 1; }
@@ -303,11 +346,52 @@ const Analysis = (() => {
     else if (ka.letter !== kb.letter && (diff === 1 || diff === 11)) { rel = '能接，换个情绪'; score = 0.6; }
     else { rel = '调性不太搭'; score = 0.35; }
     const bpmPct = (a.bpm / b.bpm - 1) * 100; // how much B has to change to meet A
-    const semis = 12 * Math.log2(a.bpm / b.bpm);
-    const abs = Math.abs(bpmPct);
+    const abs = Math.abs(bpmPct), off = Math.abs(cents);
+    // in between two keys every sustained note beats against the other song
+    const tune = off <= 30 ? 1 : off <= 40 ? 0.85 : 0.65;
+    score *= tune;
     const bpmScore = abs <= 2 ? 1 : abs <= 4 ? 0.85 : abs <= 6 ? 0.6 : abs <= 8 ? 0.4 : 0.15;
-    return { rel, keyScore: score, bpmPct, semis, bpmScore, overall: Math.round((score * 0.55 + bpmScore * 0.45) * 100) };
+    const db = a.loud > 0 && b.loud > 0 ? 20 * Math.log10(b.loud / a.loud) : 0;
+    return { rel, keyScore: score, tune, bpmPct, semis, shift, cents, heardKey: kb, bpmScore, loudDb: db, overall: Math.round((score * 0.55 + bpmScore * 0.45) * 100) };
   }
 
-  return { analyze, shiftDownbeat, compat, keyInfo, NAMES };
+  // How well two sets of notes sit together, interval by interval (unison and fifths blend, semitones and tritones grind).
+  const BLEND = [1, 0, 0.35, 0.7, 0.7, 0.85, 0.1, 0.9, 0.6, 0.65, 0.35, 0.05];
+  function blend(ca, cb, shift) {
+    let sa = 0, sb = 0, s = 0;
+    for (let i = 0; i < 12; i++) { sa += ca[i]; sb += cb[i]; }
+    if (sa <= 0 || sb <= 0) return null;
+    for (let i = 0; i < 12; i++) {
+      if (!ca[i]) continue;
+      for (let j = 0; j < 12; j++) if (cb[j]) s += ca[i] * cb[j] * BLEND[(((j + shift - i) % 12) + 12) % 12];
+    }
+    return s / (sa * sb);
+  }
+
+  /* Listen to the stretch where the two songs overlap: `len` bars, song A from bar `startA`,
+   * song B from its bar `cueB`. Returns
+   *   mel    how much of the overlap has melody in both songs at once (0..1)
+   *   harm   how well the notes that are actually playing there go together (0..1), null when one side is only drums
+   *   clash  the part of the overlap that will sound sour (0..1)
+   *   bassIn the bar of the overlap where the second song's bass arrives, null if it has none there */
+  function overlap(a, b, startA, cueB, len, c = compat(a, b)) {
+    let w = 0, mel = 0, hs = 0, hw = 0, bassIn = null;
+    const sumA = new Float32Array(12), sumB = new Float32Array(12);
+    for (let k = 0; k < len; k++) {
+      const i = startA + k, j = cueB + k;
+      if (i < 0 || j < 0 || i >= a.nBars || j >= b.nBars) continue;
+      const both = Math.min(a.barMel[i], b.barMel[j]);
+      w++; mel += both;
+      if (both > 0.15) { for (let n = 0; n < 12; n++) { sumA[n] += a.barCh[i][n] * both; sumB[n] += b.barCh[j][n] * both; } hw += both; }
+      if (bassIn == null && b.barBass[j] >= 0.4 && (b.barBass[j + 1] ?? 1) >= 0.4) bassIn = k;
+    }
+    mel = w ? mel / w : 0;
+    const raw = hw > 0 ? blend(sumA, sumB, c.shift) : null;
+    // measured on the built-in songs: a song against itself scores 0.68, a fifth apart 0.64, a semitone apart 0.39
+    const harm = raw == null ? null : Math.max(0, Math.min(1, (raw - 0.42) / 0.22)) * c.tune;
+    const clash = harm == null ? 0 : Math.min(1, mel * 1.6) * (1 - harm);
+    return { mel, harm, clash, bassIn, raw };
+  }
+
+  return { analyze, shiftDownbeat, compat, overlap, blend, keyInfo, NAMES };
 })();

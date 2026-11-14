@@ -485,7 +485,9 @@
         h('span', { html: wheelSVG(A.an.key, B.an.key) }),
         h('div', { class: 'score' }, h('b', {}, String(c.overall)), h('span', {}, '契合度'))),
       h('span', { class: 'sep' }),
-      h('div', { class: 'fact' }, h('b', {}, `${A.an.key.camelot} → ${B.an.key.camelot}`), h('small', { class: keyCls }, c.rel)),
+      // the second key is the one the listener hears once the tempo is matched
+      h('div', { class: 'fact', title: c.shift ? `后一首原本是 ${B.an.key.camelot}，变速后听起来是 ${c.heardKey.camelot}` : '' },
+        h('b', {}, `${A.an.key.camelot} → ${c.heardKey.camelot}`), h('small', { class: keyCls }, Math.abs(c.cents) > 30 ? `${c.rel}，变速后略跑调` : c.rel)),
       h('div', { class: 'fact', title: `变速带来 ${c.semis >= 0 ? '+' : ''}${c.semis.toFixed(2)} 半音的音高变化` }, h('b', {}, `${A.an.bpm} → ${B.an.bpm}`), h('small', { class: bpmCls }, Math.abs(c.bpmPct) < 0.05 ? '速度一样' : `后一首${c.bpmPct >= 0 ? '加快' : '放慢'} ${Math.abs(c.bpmPct).toFixed(1)}%`)));
   }
 

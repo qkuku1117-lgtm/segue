@@ -15,6 +15,43 @@ const Planner = (() => {
   };
   const clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v));
   const align8 = b => Math.max(0, Math.floor(b / 8) * 8);
+  const meanOf = (arr, a, b) => { let s = 0, n = 0; for (let i = Math.max(0, a); i < Math.min(arr.length, b); i++) { s += arr[i]; n++; } return n ? s / n : 0; };
+
+  /* Where to mix. A DJ does not start "32 bars before the end": they find the phrase where the first song
+   * thins out, and cue the second song so that its bass line arrives on the very bar the bass is swapped.
+   * Try every phrase start of both songs and keep the pair that sounds best:
+   *   out    the first song is past its last high point when the mix ends
+   *   bass   the second song's bass line arrives on the swap bar (`half`), not before and not after
+   *   lift   the second song is fuller after the mix than the first song was going out
+   *   clean  little of the overlap has two melodies fighting
+   *   early  the second song comes in from its opening, the way it was written to be mixed */
+  function findSpot(A, B, len, half, c, fallback) {
+    const startsA = [], startsB = [];
+    for (let s = A.phraseOffset % 8; s + len <= A.nBars; s += 8) if (s >= 8 && s >= A.nBars * 0.4) startsA.push(s);
+    const lastCue = Math.min(B.nBars - len - 8, Math.max(B.firstDrop ?? 0, 16));
+    for (let s = B.phraseOffset % 8; s <= lastCue; s += 8) startsB.push(s);
+    let best = null;
+    for (const sA of startsA) for (const cB of startsB) {
+      const ov = Analysis.overlap(A, B, sA, cB, len, c);
+      const out = clamp(1 - Math.abs(sA + half - A.lastDropEnd) / 24);
+      const before = meanOf(B.barBass, cB, cB + half), after = meanOf(B.barBass, cB + half, cB + half + 4);
+      const bass = clamp((after - 0.3) / 0.4) * (0.55 + 0.45 * clamp(1 - before / 0.5));
+      const lift = clamp(0.5 + (meanOf(B.barEnergy, cB + len, cB + len + 8) - meanOf(A.barEnergy, sA + len, sA + len + 8)));
+      const early = 1 - cB / Math.max(8, lastCue);
+      const score = 0.25 * out + 0.2 * bass + 0.1 * lift + 0.35 * (1 - ov.clash) + 0.1 * early + (sA === fallback.startA && cB === fallback.cueB ? 0.02 : 0);
+      if (!best || score > best.score + 1e-9) best = { startA: sA, cueB: cB, score, out, bass, lift, ov };
+    }
+    if (!best) {
+      const ov = Analysis.overlap(A, B, fallback.startA, fallback.cueB, len, c);
+      best = { ...fallback, score: 0, out: 0.5, bass: 0.5, lift: 0.5, ov };
+    }
+    // what the coach can say about this spot, in the order a listener would notice it
+    best.listen = {
+      melody: +best.ov.mel.toFixed(2), blend: best.ov.harm == null ? null : +best.ov.harm.toFixed(2), clash: +best.ov.clash.toFixed(2),
+      bassOnSwap: best.bass >= 0.7, bassIn: best.ov.bassIn, thinOut: best.out >= 0.6, duck: best.ov.clash >= 0.2,
+    };
+    return best;
+  }
 
   function make(analA, analB) {
     const c = Analysis.compat(analA, analB);
@@ -22,15 +59,18 @@ const Planner = (() => {
     const introB = analB.sections[0] && !analB.sections[0].high ? analB.sections[0].end : 0;
     const swapLen = barsA >= 48 ? 32 : 16;
     const plans = [];
+    // two melodies that grind against each other: the first song's MID comes down early to make room
+    const duckMid = (sp, bar, dur) => sp.listen.duck
+      ? [{ bar, dur, deck: 'A', ctrl: 'mid', to: 0.22, label: '把前一首的 MID 收到 9 点', why: '两首的旋律不合，前一首先让出中频' }] : [];
 
     {
-      const S = Math.max(8, align8(Math.min(outroA, barsA - swapLen)));
       const half = swapLen / 2;
+      const sp = findSpot(analA, analB, swapLen, half, c, { startA: Math.max(8, align8(Math.min(outroA, barsA - swapLen))), cueB: analB.phraseOffset % 8 });
       plans.push({
-        id: 'swap', name: '长混', en: 'Bass Swap', difficulty: 2, len: swapLen, startA: S, cueB: analB.phraseOffset % 8,
+        id: 'swap', name: '长混', en: 'Bass Swap', difficulty: 2, len: swapLen, startA: sp.startA, cueB: sp.cueB, listen: sp.listen,
         tagline: `两首歌叠 ${swapLen} 小节，在乐句点交换低频`,
         tags: ['夜店最常用', '丝滑'],
-        fit: Math.round(100 * (0.5 * c.keyScore + 0.3 * c.bpmScore + 0.2 * (introB >= 8 ? 1 : 0.55))),
+        fit: Math.round(100 * (0.3 * (1 - sp.ov.clash) + 0.2 * c.keyScore + 0.3 * c.bpmScore + 0.2 * (0.4 + 0.6 * sp.bass))),
         pre: [
           { deck: 'B', ctrl: 'sync', label: '按 SYNC，让后一首的速度追上前一首' },
           { deck: 'B', ctrl: 'low', to: 0, label: '把后一首的 LOW 拧到底' },
@@ -39,7 +79,8 @@ const Planner = (() => {
         actions: [
           { bar: 0, deck: 'B', ctrl: 'play', label: '前一首进新乐句的第一拍，按后一首的 PLAY', why: '卡在乐句头，段落才对齐' },
           { bar: 0, dur: half / 2, deck: 'B', ctrl: 'fader', to: 1, label: `${half / 2} 小节内慢慢把后一首推满`, why: '后一首还没低音，慢慢推不抢戏' },
-          { bar: half, deck: 'A', ctrl: 'low', to: 0, label: '交换低频：前一首的 LOW 拧到底', why: '乐句头换低音，听着最顺' },
+          ...duckMid(sp, half / 2, half / 2),
+          { bar: half, deck: 'A', ctrl: 'low', to: 0, label: '交换低频：前一首的 LOW 拧到底', why: sp.listen.bassOnSwap ? '后一首的贝斯正好在这一拍进来' : '乐句头换低音，听着最顺' },
           { bar: half, deck: 'B', ctrl: 'low', to: 0.5, label: '同时把后一首的 LOW 拧回 12 点', why: '一出一进，低音只留一首' },
           { bar: half + 4, dur: 4, deck: 'A', ctrl: 'high', to: 0.22, label: '把前一首的 HIGH 慢慢收到 9 点', why: '两套镲会糊，前一首先退' },
           { bar: half + half / 2, dur: half / 2, deck: 'A', ctrl: 'fader', to: 0, label: `最后 ${half / 2} 小节把前一首拉下去`, why: '前一首自然淡出' },
@@ -47,12 +88,12 @@ const Planner = (() => {
       });
     }
     {
-      const S = Math.max(8, align8(Math.min(outroA, barsA - 16)));
+      const sp = findSpot(analA, analB, 16, 8, c, { startA: Math.max(8, align8(Math.min(outroA, barsA - 16))), cueB: analB.phraseOffset % 8 });
       plans.push({
-        id: 'filter', name: '滤波推进', en: 'Filter Ride', difficulty: 2, len: 16, startA: S, cueB: analB.phraseOffset % 8,
+        id: 'filter', name: '滤波推进', en: 'Filter Ride', difficulty: 2, len: 16, startA: sp.startA, cueB: sp.cueB, listen: sp.listen,
         tagline: '后一首从高通里长出来，前一首闷下去让位',
         tags: ['有张力', '16 小节'],
-        fit: Math.round(100 * (0.4 * c.keyScore + 0.4 * c.bpmScore + 0.12)),
+        fit: Math.round(100 * (0.25 * (1 - sp.ov.clash) + 0.15 * c.keyScore + 0.4 * c.bpmScore + 0.12)),
         pre: [
           { deck: 'B', ctrl: 'sync', label: '按 SYNC，让后一首的速度追上前一首' },
           { deck: 'B', ctrl: 'filter', to: 0.75, label: '后一首的 FILTER 往右拧到 4 点钟（高通）' },
@@ -72,8 +113,11 @@ const Planner = (() => {
       const exit = Math.max(8, align8(analA.lastDropEnd));
       const S = Math.min(exit, barsA - 4) - 4;
       const cue = analB.firstDrop ?? analB.phraseOffset % 8;
+      // the two songs barely overlap here: only the echo tail of the first one rings over the second
+      const ov = Analysis.overlap(analA, analB, S + 4, cue, 2, c);
       plans.push({
         id: 'echo', name: '回声收尾', en: 'Echo Out', difficulty: 1, len: 8, startA: S, cueB: cue,
+        listen: { melody: 0, blend: ov.harm == null ? null : +ov.harm.toFixed(2), clash: 0, bassOnSwap: false, bassIn: 0, thinOut: true, cut: true },
         tagline: '前一首用回声甩出去，后一首直接从 drop 砸进来',
         tags: ['新手友好', '干脆利落'],
         fit: Math.round(100 * (0.1 * c.keyScore + 0.3 * c.bpmScore + 0.35 * (analB.firstDrop != null ? 1 : 0.5) + 0.1)),
@@ -94,6 +138,10 @@ const Planner = (() => {
     // a long overlap needs the two tempos close: past about 6% the pitch shift is audible, so the short hand-over wins
     const gap = Math.abs(c.bpmPct);
     if (gap > 6) plans.forEach(p => { p.fit = p.id === 'echo' ? Math.min(96, p.fit + 22) : Math.round(p.fit * 0.8); p.tempoGap = true; });
+    // an overlap that will sound sour is the other reason to keep it short
+    const long = plans.find(p => p.id === 'swap').listen, cut = plans.find(p => p.id === 'echo');
+    cut.sour = long.duck;
+    if (long.clash >= 0.45 && gap <= 6) cut.fit = Math.min(94, cut.fit + 14);
     const ranked = [...plans].sort((a, b) => b.fit - a.fit || a.difficulty - b.difficulty);
     ranked[0].pick = true;
     return { plans, compat: c, reasons: reasons(analA, analB, c, plans), pickId: ranked[0].id };
@@ -226,7 +274,26 @@ const Coach = (() => {
     return {
       前一首: { title: A.title, bpm: A.an.bpm, key: `${A.an.key.name} (${A.an.key.camelot})`, bars: A.an.nBars, sections: sec(A.an) },
       后一首: { title: B.title, bpm: B.an.bpm, key: `${B.an.key.name} (${B.an.key.camelot})`, bars: B.an.nBars, sections: sec(B.an) },
-      plan: plan ? { id: plan.id, name: plan.name, bars: plan.len, steps: plan.steps.map(s => `第${s.bar}小节: ` + s.actions.map(a => a.label).join(' + ')) } : undefined,
+      plan: plan ? { id: plan.id, name: plan.name, bars: plan.len, 重叠段听感: listenWords(plan), steps: plan.steps.map(s => `第${s.bar}小节: ` + s.actions.map(a => a.label).join(' + ')) } : undefined,
+    };
+  }
+
+  // the listening results in words the model (and a person reading the prompt) can use directly
+  function heard(c) {
+    const out = {};
+    if (c.shift || Math.abs(c.cents) > 30) out.变速后的音高 = `后一首整体${c.semis >= 0 ? '升高' : '降低'} ${Math.abs(c.semis).toFixed(2)} 个半音，听到的调是 ${c.heardKey.name} (${c.heardKey.camelot})${Math.abs(c.cents) > 30 ? '，夹在两个调之间，长音叠着会发酸' : ''}`;
+    if (Math.abs(c.loudDb) >= 1.5) out.响度 = `后一首比前一首${c.loudDb > 0 ? '响' : '轻'} ${Math.abs(c.loudDb).toFixed(1)} dB（已自动补平）`;
+    return out;
+  }
+  function listenWords(p) {
+    const L = p.listen;
+    if (!L) return undefined;
+    if (L.cut) return { 重叠: '几乎不重叠，只有前一首的回声尾巴', 回声尾巴和后一首的音: L.blend == null ? '后一首进来时没有旋律' : L.blend >= 0.6 ? '合得上' : '不太合，回声别留太久' };
+    return {
+      两首同时有旋律的比例: `${Math.round(L.melody * 100)}%`,
+      叠在一起的音: L.blend == null ? '有一首只有鼓，不会打架' : L.blend >= 0.7 ? '很合' : L.blend >= 0.45 ? '基本合' : '不合，会发酸',
+      后一首的贝斯: L.bassIn == null ? '这段里一直没进来' : L.bassOnSwap ? `正好在换低频那一拍（第 ${L.bassIn} 小节）进来` : L.bassIn === 0 ? '从一开始就有，所以先关它的 LOW' : `在第 ${L.bassIn} 小节进来`,
+      前一首: L.thinOut ? '混的时候正在收尾变薄' : '混的时候还在高潮里',
     };
   }
 
@@ -234,11 +301,12 @@ const Coach = (() => {
     if (!sample) return null;
     const data = {
       ...summary(A, B),
-      compat: { relation: planset.compat.rel, 后一首需要变速: `${planset.compat.bpmPct.toFixed(1)}%` },
-      plans: planset.plans.map(p => ({ id: p.id, name: `${p.name} ${p.en}`, difficulty: p.difficulty, bars: p.len, 前一首从第几小节开始混: p.startA, 后一首从它的第几小节进: p.cueB, ruleFit: p.fit, steps: p.steps.map(s => `+${s.bar}: ` + s.actions.map(a => a.label).join(' / ')) })),
+      compat: { relation: planset.compat.rel, 后一首需要变速: `${planset.compat.bpmPct.toFixed(1)}%`, ...heard(planset.compat) },
+      plans: planset.plans.map(p => ({ id: p.id, name: `${p.name} ${p.en}`, difficulty: p.difficulty, bars: p.len, 前一首从第几小节开始混: p.startA, 后一首从它的第几小节进: p.cueB, ruleFit: p.fit, 重叠段听感: listenWords(p), steps: p.steps.map(s => `+${s.bar}: ` + s.actions.map(a => a.label).join(' / ')) })),
     };
     const prompt = `${PERSONA}
 下面是浏览器本地分析两首歌得到的数据，以及规则引擎生成的 3 个可执行过渡方案（时间点已经算好，你不需要改）。
+“重叠段听感”是逐小节听两首歌叠在一起的那一段得到的：旋律重叠多不多、叠在一起的音合不合、后一首的贝斯在哪一拍进来。点评要用上这些具体发现，不要说放在任何两首歌上都成立的话。
 请判断：哪个方案最适合这位新手现在先练？并为每个方案写一句"为什么这样接好听"和一句"新手最容易犯的错"。
 只输出 JSON，不要任何其他文字：
 {"pick":"<方案 id>","headline":"<不超过 16 个字的推荐理由>","plans":{"<id>":{"why":"<不超过 24 个字，口语>","pitfall":"<不超过 18 个字>"}}}
@@ -287,7 +355,14 @@ const Coach = (() => {
       filter: { why: '后一首从高频里慢慢长出来，自带张力。', pitfall: '滤波转太快，没撑满 8 小节。' },
       echo: { why: '前一首留个回声甩出去，后一首的高潮直接补上。', pitfall: '前一首拉下和后一首起播没落在同一拍。' },
     };
-    return map[p.id];
+    const copy = { ...map[p.id] }, L = p.listen;
+    if (!L || L.cut) { if (p.sour) copy.why = '这两首叠久了会发酸，干脆利落地换最好听。'; return copy; }
+    // say what was heard in this pair's overlap, not what is true of every pair
+    if (L.duck) { copy.why = '有几小节两首都有旋律，而且音不太合。'; copy.pitfall = p.id === 'swap' ? '前一首的 MID 收晚了，中间会发酸。' : copy.pitfall; }
+    else if (L.melody < 0.12 && p.id === 'swap') copy.why = L.bassOnSwap ? '后一首先只进鼓，贝斯正好在换低音那拍进来。' : '后一首先只进鼓，和前一首的旋律不抢。';
+    else if (L.bassOnSwap && p.id === 'swap') copy.why = '后一首的贝斯正好在换低音那一拍进来。';
+    else if (L.blend != null && L.blend >= 0.7 && L.melody >= 0.3) copy.why = '两首的旋律叠在一起是合的，可以放心叠久一点。';
+    return copy;
   }
 
   function fallbackReview(result) {
