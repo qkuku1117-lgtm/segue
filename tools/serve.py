@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Segue, played on your own computer.
 
-    python3 tools/serve.py            # opens http://localhost:8765/
+    python3 tools/serve.py            # opens http://localhost:8765/dist/segue.html
 
 Serves the single-file build and, when the Claude command-line tool is installed
 and signed in on this computer, lets the page's coach ask it questions. No API key:
@@ -85,6 +85,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self.path in ('/', '/index.html'):
             self.send_response(302)
             self.send_header('Location', '/dist/segue.html')
+            self.send_header('Cache-Control', 'no-store')
             self.end_headers()
         elif self.path == '/api/coach':
             if not self.ours():
@@ -125,7 +126,7 @@ def main():
     if not os.path.exists(os.path.join(ROOT, 'dist', 'segue.html')):
         sys.exit('dist/segue.html is missing: run  python3 tools/build.py  first')
     server = http.server.ThreadingHTTPServer(('127.0.0.1', PORT), Handler)
-    url = f'http://localhost:{PORT}/'
+    url = f'http://localhost:{PORT}/dist/segue.html'
     print(f'Segue  {url}')
     print(f'coach  {"your Claude (" + MODEL + ")" if CLAUDE else "built-in (install and sign in to the claude command to get Claude)"}')
     print('stop   Ctrl+C')
