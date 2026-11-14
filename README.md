@@ -10,9 +10,17 @@ Segue 是一个给 DJ 新手的混音练习台。放进两首歌，AI 给出三�
 
 | 方式 | 怎么做 | AI 点评 |
 | --- | --- | --- |
+| 本地启动器（推荐） | 在仓库根目录运行 `python3 tools/serve.py`，浏览器会自动打开 | 你电脑上的 Claude |
 | 单文件 | 下载 [`dist/segue.html`](dist/segue.html)，双击用 Chrome / Safari 打开 | 内置教练 |
-| 本地服务 | 在仓库根目录运行 `python3 -m http.server 8765`，打开 `http://localhost:8765/dist/segue.html` | 内置教练 |
 | claude.ai Artifact | 在 claude.ai 里打开发布的 Artifact | Claude 实时生成 |
+
+### 本地启动器
+
+`tools/serve.py` 只用 Python 标准库。如果这台电脑装了 [Claude 命令行工具](https://claude.com/claude-code) 并且已登录，页面里的教练就由它来回答：三种接法的点评、练完后的复盘、随时提问。不需要 API key，用的是你自己的 Claude 额度；没装的话自动退回内置教练，其他功能不受影响。
+
+- 只监听 `127.0.0.1`，只回答它自己送出去的页面（其他网站发来的请求一律 403）。
+- Claude 以“所有工具关闭”的方式运行：只能读问题、写回答，不能读写文件、执行命令或联网，也不保存会话。
+- 每次回答大约 5 秒。默认用 `sonnet`，想换模型：`SEGUE_MODEL=opus python3 tools/serve.py`；换端口：`SEGUE_PORT=9000`。
 
 不需要账号、不需要后端。歌曲只在浏览器里解码和分析，不会上传。自带一个 6 首歌的曲库，全部由浏览器实时合成（无采样、无版权音频），打开就能玩。
 
@@ -109,6 +117,7 @@ js/planner.js     三种方案生成、逐帧打分、Coach（Claude + 内置教
 js/synth.js       曲库：6 首示例曲的离线合成
 js/ui.js          视图、调音台控件、教练卡片、复盘
 tools/build.py    把所有脚本内联成 dist/segue.html
+tools/serve.py    本地启动器：送出页面，并把教练的问题转给本机的 Claude
 ```
 
 修改后运行 `python3 tools/build.py` 重新生成单文件版。在地址后加 `?mute` 可以静音运行（仪表和打分照常）。

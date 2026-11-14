@@ -245,8 +245,10 @@ const Planner = (() => {
   return { make, stateAt, evaluate, CTRL_NAME, DEFAULTS, METRIC_LABEL };
 })();
 
-/* The AI coach. Uses Claude through the artifact's `sample` capability when the
- * viewer allows it; otherwise falls back to the rule engine's own words. */
+/* The AI coach. Three places it can get Claude from, tried in this order:
+ *   - on claude.ai, the artifact's `sample` capability (when the viewer allows it)
+ *   - on your own computer, the launcher (tools/serve.py), which passes questions to the Claude installed there
+ *   - neither: the rule engine's own words */
 const Coach = (() => {
   let sample = null, state = 'checking';
   const listeners = [];
@@ -256,9 +258,36 @@ const Coach = (() => {
     try {
       if (window.claude && typeof window.claude.use === 'function') sample = await window.claude.use('sample');
     } catch (e) { sample = null; }
+    if (!sample) sample = await localSample();
     state = sample ? 'online' : 'offline';
     emit();
   })();
+
+  // Played locally: the same two calls the artifact offers, answered by the launcher on this computer.
+  async function localSample() {
+    if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return null;
+    const head = { 'X-Segue': '1' };
+    try {
+      const r = await fetch('/api/coach', { headers: head });
+      if (!r.ok || !(await r.json()).ok) return null;
+    } catch (e) { return null; }
+    const call = async (input, opts = {}) => {
+      const messages = typeof input === 'string' ? [{ role: 'user', content: input }] : input;
+      let r, d = {};
+      try {
+        r = await fetch('/api/coach', { method: 'POST', headers: { ...head, 'Content-Type': 'application/json' }, body: JSON.stringify({ messages }), signal: opts.signal });
+        d = await r.json();
+      } catch (e) { throw { code: 'failed', message: String(e) }; }
+      if (!r.ok || !d.text) throw { code: d.code || 'failed', message: d.error || 'no answer' };
+      if (opts.onText) opts.onText({ text: d.text, delta: d.text });
+      return { text: d.text, truncated: false };
+    };
+    call.json = async (prompt, opts) => {
+      const { text } = await call(prompt, opts), m = text.match(/\{[\s\S]*\}/);
+      return JSON.parse(m ? m[0] : text);
+    };
+    return call;
+  }
 
   function fail(e) {
     if (e && (e.code === 'not_granted' || e.code === 'unavailable')) { sample = null; state = 'offline'; emit(); }
