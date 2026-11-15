@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Segue · AI 混音教练</title>
+<title>Segue · 混音教练</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -412,7 +412,6 @@ kbd { display: inline-grid; place-items: center; min-width: 28px; height: 26px; 
 .about li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 18px; background: var(--booth); }
 .about b { display: block; font-size: 14px; font-weight: 600; }
 .about small { display: block; font-size: 12px; line-height: 1.5; color: var(--dim); }
-.about-note { margin: 12px 0 0; font-size: 12px; color: var(--faint); text-align: center; }
 
 @media (max-width: 1100px) {
   .plans { grid-template-columns: minmax(0, 1fr); }
@@ -848,6 +847,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
 
 /* ---------- the coach sheet: one setting, the player's own Gemini key ---------- */
 .coach-now { margin: 0 0 16px; font-size: 15px; line-height: 1.5; color: var(--dim); }
+.coach-now:empty { display: none; }
 .gem { display: flex; flex-wrap: wrap; gap: 8px; }
 .gem input, .gem select { height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--booth); color: var(--text); font: inherit; font-size: 15px; outline: none; -webkit-appearance: none; appearance: none; }
 .gem input { flex: 1 1 220px; min-width: 0; }
@@ -872,7 +872,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
       <button data-go="review" disabled>复盘</button>
     </nav>
     <div class="top-r">
-      <button class="ai-chip" id="aiChip" data-state="checking"><i></i><span>连接中</span></button>
+      <button class="ai-chip" id="aiChip" data-state="offline"><i></i><span>填入 key</span></button>
       <div class="vol" id="vol"><input type="range" id="volRange" min="0" max="100" value="80" aria-label="音量"><button class="icon-btn hd" id="volBtn" aria-label="静音" aria-pressed="false"></button></div>
       <button class="icon-btn hd" id="themeBtn" aria-label="外观"></button>
       <button class="icon-btn hd" id="helpBtn" aria-label="怎么玩" title="怎么玩"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.2 9.2a2.9 2.9 0 0 1 5.6 1c0 2-2.8 2.4-2.8 4.3"/><circle cx="12" cy="18.3" r=".6" fill="currentColor"/></svg></button>
@@ -902,11 +902,10 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
     </div>
     <h3>关于</h3>
     <ul class="about">
-      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 18V6M9 18v-8M14 18V9M19 18v-5"/></svg></span><span><b>规则引擎</b><small>测速度、找乐句、排方案、打分。每次结果都一样，离线也能用。</small></span></li>
-      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3.5l1.9 5.6 5.6 1.9-5.6 1.9L11 18.5l-1.9-5.6L3.5 11l5.6-1.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></span><span><b>Gemini</b><small>填入你自己的 API key 后，点评方案、写复盘、回答问题，还能听一遍接法的预听。没填时由内置教练接手。</small></span></li>
-      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span><span><b>只在本机</b><small>歌曲在你的浏览器里解码和分析，不上传。只有你点“听一遍”时，才会把约一分钟的预听发给 Google。曲库里的 6 首是浏览器现场合成的原创曲，自带调性标签；你上传的歌由分析器来测。“在线找”到的歌来自 Internet Archive，按各自的 CC 协议使用，只下载到这台电脑。</small></span></li>
+      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 18V6M9 18v-8M14 18V9M19 18v-5"/></svg></span><span><b>规则引擎</b><small>测速度、找乐句、排方案、打分。每次结果都一样。</small></span></li>
+      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3.5l1.9 5.6 5.6 1.9-5.6 1.9L11 18.5l-1.9-5.6L3.5 11l5.6-1.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></span><span><b>教练</b><small>点评方案、写复盘、回答问题，还能听一遍你选的接法。右上角填入 API key 后开始。</small></span></li>
+      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span><span><b>曲库</b><small>自带的 6 首是现场合成的原创曲，带调性标签；你上传的歌由分析器来测。“在线找”到的歌来自 Internet Archive，按各自的 CC 协议使用。</small></span></li>
     </ul>
-    <p class="about-note">Segue 是一个 AI 产品作品集 Demo。</p>
   </div>
 </dialog>
 
@@ -922,7 +921,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
     </form>
     <div class="find-chips" id="findChips" role="group" aria-label="风格"></div>
     <div class="find-list" id="findList" aria-live="polite"></div>
-    <p class="find-note"><span>来自 Internet Archive 的网络厂牌，CC 授权。点一首下载到本机。</span><button class="linkbtn" type="button" id="findMore">换一批</button></p>
+    <p class="find-note"><span>来自 Internet Archive 的网络厂牌，CC 授权。</span><button class="linkbtn" type="button" id="findMore">换一批</button></p>
   </div>
 </dialog>
 
@@ -939,7 +938,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
       <button class="btn sm primary" type="submit" id="gemSave">保存</button>
     </form>
     <p class="gem-msg" id="gemMsg" aria-live="polite"></p>
-    <p class="find-note"><span>key 只存在这个浏览器里，只发给 Google。提问会带上两首歌的分析数据。</span><span class="gem-acts"><a class="linkbtn" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">申请 key</a><button class="linkbtn" type="button" id="gemClear" hidden>清除</button></span></p>
+    <p class="find-note"><span></span><span class="gem-acts"><a class="linkbtn" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">申请 key</a><button class="linkbtn" type="button" id="gemClear" hidden>清除</button></span></p>
   </div>
 </dialog>
 
@@ -976,7 +975,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
         </div>
         <p class="crate-note">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-          可直接拖入 MP3 · WAV · M4A　只在本机分析，不上传
+          可直接拖入 MP3 · WAV · M4A
         </p>
       </section>
     </div>
@@ -1079,7 +1078,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
 </main>
 
 <footer class="site-foot">
-  <span>Segue · 一个 AI 产品作品集 Demo</span>
+  <span>Segue</span>
   <button id="footHelp">怎么玩</button>
 </footer>
 
@@ -2356,7 +2355,7 @@ const Coach = (() => {
       if (!r.ok || err) throw { code: r.status === 429 ? 'rate_limited' : 'failed', status: r.status, message: (err && err.message) || `HTTP ${r.status}` };
       const out = (d.steps || []).filter(st => st.type === 'model_output').pop();
       const text = out ? (out.content || []).filter(x => x.type === 'text').map(x => x.text).join('').trim() : '';
-      if (!text) throw { code: 'failed', message: `Gemini 没有给出回答${d.status ? `（${d.status}）` : ''}。` };
+      if (!text) throw { code: 'failed', message: `没有收到回答${d.status ? `（${d.status}）` : ''}。` };
       return text;
     };
     const call = async (input, opts = {}) => {
@@ -3241,7 +3240,7 @@ const Coach = (() => {
       box.append(h('button', { class: 'plan' + (enter ? ' pre' : ''), style: `transition-delay:${enter ? i * 70 : 0}ms`, 'data-plan': p.id, onclick: () => paintPick(p.id) },
         h('span', { class: 'plan-head' },
           h('span', {}, h('span', { class: 'plan-name' }, p.name), h('span', { class: 'plan-line' }, PLAN_LINE[p.id](p))),
-          h('span', { class: 'fit' }, h('b', {}, String(p.fit)), h('small', { class: p.id === pickId ? 'pick' : '' }, p.id === pickId ? (ai ? `${Coach.name} 推荐` : '推荐') : '适合度'))),
+          h('span', { class: 'fit' }, h('b', {}, String(p.fit)), h('small', { class: p.id === pickId ? 'pick' : '' }, p.id === pickId ? '推荐' : '适合度'))),
         h('span', { class: 'plan-meta' },
           h('span', {}, `${p.len} 小节`),
           h('span', { class: 'dots', 'aria-label': `难度 ${p.difficulty} / 3` }, ...[1, 2, 3].map(n => h('i', { class: n <= p.difficulty ? 'on' : '' }))),
@@ -3268,7 +3267,7 @@ const Coach = (() => {
     $('#barName').textContent = p.name;
     $('#barLine').textContent = PLAN_LINE[p.id](p);
     $('#barMeta').textContent = `${p.len} 小节 · 约 ${Math.round(p.len * 240 / S.tracks.A.an.bpm)} 秒 · ${p.actions.length} 个动作`;
-    $('#whoSays').textContent = id !== pickId ? '' : ai ? `${Coach.name} 推荐。` : pending ? `${Coach.name} 在看…` : p.tempoGap ? '速度差得多，推荐这种。' : '推荐。';
+    $('#whoSays').textContent = id !== pickId ? '' : ai ? '推荐。' : pending ? '在看…' : p.tempoGap ? '速度差得多，推荐这种。' : '推荐。';
     $('#claudeLine').classList.toggle('ai', !!ai);
     $('#barWhy').textContent = copy.why;
     $('#barPit').textContent = copy.pitfall || '';
@@ -3335,7 +3334,7 @@ const Coach = (() => {
         if (text) { a.textContent = text; S.chat.push({ role: 'assistant', content: text }); busy = false; return; }
         S.chat.pop();
       }
-      a.textContent = faq ? faq.a : Coach.state === 'offline' ? '填入 Gemini API key 之后可以随便问，先看看上面几个问题。' : Coach.lastError || '这次没答上来，再问一次。';
+      a.textContent = faq ? faq.a : Coach.state === 'offline' ? '填入 key 之后可以随便问，先看看上面几个问题。' : Coach.lastError || '这次没答上来，再问一次。';
       busy = false;
     };
     // the plan on screen: the one picked on the plans page, the one just practised on the review page
@@ -3350,7 +3349,7 @@ const Coach = (() => {
       log.append(a);
       try {
         const mix = await renderPreview(p);
-        a.textContent = `${Coach.name} 在听…`;
+        a.textContent = '在听…';
         const text = await Coach.listen(mix.wav, mix.secs, mix.lead, S.tracks.A, S.tracks.B, p);
         if (text) { a.textContent = text; S.chat.push({ role: 'user', content: `（你刚听了「${p.name}」的预听）` }, { role: 'assistant', content: text }); }
         else a.textContent = Coach.lastError || '这次没听成，再试一次。';
@@ -3360,7 +3359,7 @@ const Coach = (() => {
     const online = Coach.state !== 'offline';
     box.append(
       h('button', { class: 'btn sm quiet ask-toggle', 'aria-expanded': 'false', onclick: e => { const o = box.classList.toggle('open'); e.currentTarget.setAttribute('aria-expanded', o); } }, '问教练'),
-      h('div', { class: 'ask-chips' }, online && plan() ? h('button', { class: 'hear', onclick: hear }, `让 ${Coach.name} 听一遍`) : '', ...Coach.FAQ.map(f => h('button', { onclick: () => send(f.q) }, f.q))),
+      h('div', { class: 'ask-chips' }, online && plan() ? h('button', { class: 'hear', onclick: hear }, '让教练听一遍') : '', ...Coach.FAQ.map(f => h('button', { onclick: () => send(f.q) }, f.q))),
       online ? h('form', { onsubmit: e => { e.preventDefault(); send(input.value); } }, input, h('button', { class: 'btn', type: 'submit', 'aria-label': '发送' }, '发送')) : '',
       log);
   }
@@ -3890,7 +3889,7 @@ const Coach = (() => {
     const fallback = Coach.fallbackReview(r).split('\n').pop().replace(/^·\s*(下次目标：)?/, '');
     const offline = () => { line.classList.remove('ai'); who.textContent = '教练：'; cm.textContent = fallback; };
     if (Coach.state === 'online') {
-      line.classList.add('ai'); who.textContent = `${Coach.name}：`; cm.textContent = '正在写点评…';
+      line.classList.add('ai'); who.textContent = '教练：'; cm.textContent = '正在写点评…';
       Coach.review(S.tracks.A, S.tracks.B, p, r, t => { if (S.result === R) cm.textContent = t; }).then(t => {
         if (S.result !== R) return;
         if (t) cm.textContent = t.trim(); else offline();
@@ -4030,8 +4029,8 @@ const Coach = (() => {
   function updateChip(state) {
     const chip = $('#aiChip');
     chip.dataset.state = state;
-    chip.querySelector('span').textContent = { online: `${Coach.name} 在线`, offline: '内置教练', busy: `${Coach.name} 稍后再试` }[state];
-    chip.title = state === 'offline' ? '现在由内置教练讲解。点开填入 Gemini API key' : `方案点评、复盘和问答由 ${Coach.name} 生成。点开设置`;
+    chip.querySelector('span').textContent = { online: '教练在线', offline: '填入 key', busy: '稍后再试' }[state];
+    chip.title = '教练设置';
     if (S.view === 'plans' && state === 'online' && !S.aiPlans) renderPlans();
     // the ask panel offers different things with and without a model behind it
     const on = state !== 'offline';
@@ -4048,7 +4047,7 @@ const Coach = (() => {
     const on = Coach.state !== 'offline', sel = $('#gemModel');
     if (!sel.childElementCount) sel.append(...Coach.MODELS.map(([id, name]) => h('option', { value: id }, name)));
     sel.value = Coach.model;
-    $('#coachNow').textContent = on ? `${Coach.name} 在讲解。` : '现在是内置教练。填入 Gemini API key，换成 Gemini 来讲。';
+    $('#coachNow').textContent = on ? '已接上。' : '';
     $('#gemKey').value = '';
     $('#gemKey').placeholder = on ? '已保存。填新的可以替换' : 'Gemini API key';
     $('#gemClear').hidden = !on;
@@ -4058,7 +4057,7 @@ const Coach = (() => {
   }
   async function saveCoach() {
     const btn = $('#gemSave'), msg = $('#gemMsg');
-    btn.disabled = true; msg.classList.remove('bad'); msg.textContent = '正在问 Gemini 一句话…';
+    btn.disabled = true; msg.classList.remove('bad'); msg.textContent = '正在验证…';
     const r = await Coach.connect($('#gemKey').value, $('#gemModel').value);
     btn.disabled = false;
     if (r.ok) { openCoach(); msg.textContent = '接上了。'; }
@@ -4068,7 +4067,7 @@ const Coach = (() => {
   /* ---- the explainer: three steps on the first page, and the same three plus a control glossary in the help sheet ---- */
   const HOW = [
     ['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/></svg>', '放两首歌', '拖进卡片，或从曲库里挑'],
-    ['<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3.5l1.9 5.6 5.6 1.9-5.6 1.9L11 18.5l-1.9-5.6L3.5 11l5.6-1.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>', 'AI 出三种接法', '看谁更合适，先听一遍'],
+    ['<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3.5l1.9 5.6 5.6 1.9-5.6 1.9L11 18.5l-1.9-5.6L3.5 11l5.6-1.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg>', '看三种接法', '看谁更合适，先听一遍'],
     [() => ICON.knob(0.72), '跟着练，打分复盘', '照着图标拧，练完看哪步没到位'],
   ];
   const howItems = () => HOW.map(([ic, b, sm]) => `<li><span class="how-ic">${typeof ic === 'function' ? ic() : ic}</span><span><b>${b}</b><small>${sm}</small></span></li>`).join('');
@@ -4280,7 +4279,7 @@ const Coach = (() => {
     { at: ['#trackA', '#trackB'], side: 'right', t: '两张唱片', d: '上面的先放，下面的接上去。点唱片试听，转动它找位置。' },
     { at: ['#crate'], side: 'left', t: '换歌', d: FINE ? '先点选一张唱片，再点曲库里的一首；也可以直接拖到唱片上。' : '先点选一张唱片，再点曲库里的一首。' },
     { at: ['.seam-row'], side: 'right', t: '搭不搭', d: '分数越高越好接。右边的按钮把两首对调。' },
-    { at: ['.pair-acts'], side: 'right', t: '看接法', d: 'AI 给出三种接法，选一种跟着练。想再看这段引导，点右上角的问号。' },
+    { at: ['.pair-acts'], side: 'right', t: '看接法', d: '这里有三种接法，选一种跟着练。想再看这段引导，点右上角的问号。' },
   ];
   const Tour = { on: false, i: 0 };
   const tourSeen = () => { try { return !!localStorage.getItem(TOUR_KEY); } catch (e) { return false; } };

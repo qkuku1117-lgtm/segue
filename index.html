@@ -1,4 +1,4 @@
-<title>Segue · AI 混音教练</title>
+<title>Segue · 混音教练</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -407,7 +407,6 @@ kbd { display: inline-grid; place-items: center; min-width: 28px; height: 26px; 
 .about li { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 18px; background: var(--booth); }
 .about b { display: block; font-size: 14px; font-weight: 600; }
 .about small { display: block; font-size: 12px; line-height: 1.5; color: var(--dim); }
-.about-note { margin: 12px 0 0; font-size: 12px; color: var(--faint); text-align: center; }
 
 @media (max-width: 1100px) {
   .plans { grid-template-columns: minmax(0, 1fr); }
@@ -843,6 +842,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
 
 /* ---------- the coach sheet: one setting, the player's own Gemini key ---------- */
 .coach-now { margin: 0 0 16px; font-size: 15px; line-height: 1.5; color: var(--dim); }
+.coach-now:empty { display: none; }
 .gem { display: flex; flex-wrap: wrap; gap: 8px; }
 .gem input, .gem select { height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--booth); color: var(--text); font: inherit; font-size: 15px; outline: none; -webkit-appearance: none; appearance: none; }
 .gem input { flex: 1 1 220px; min-width: 0; }
@@ -865,7 +865,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
       <button data-go="review" disabled>复盘</button>
     </nav>
     <div class="top-r">
-      <button class="ai-chip" id="aiChip" data-state="checking"><i></i><span>连接中</span></button>
+      <button class="ai-chip" id="aiChip" data-state="offline"><i></i><span>填入 key</span></button>
       <div class="vol" id="vol"><input type="range" id="volRange" min="0" max="100" value="80" aria-label="音量"><button class="icon-btn hd" id="volBtn" aria-label="静音" aria-pressed="false"></button></div>
       <button class="icon-btn hd" id="themeBtn" aria-label="外观"></button>
       <button class="icon-btn hd" id="helpBtn" aria-label="怎么玩" title="怎么玩"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.2 9.2a2.9 2.9 0 0 1 5.6 1c0 2-2.8 2.4-2.8 4.3"/><circle cx="12" cy="18.3" r=".6" fill="currentColor"/></svg></button>
@@ -895,11 +895,10 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
     </div>
     <h3>关于</h3>
     <ul class="about">
-      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 18V6M9 18v-8M14 18V9M19 18v-5"/></svg></span><span><b>规则引擎</b><small>测速度、找乐句、排方案、打分。每次结果都一样，离线也能用。</small></span></li>
-      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3.5l1.9 5.6 5.6 1.9-5.6 1.9L11 18.5l-1.9-5.6L3.5 11l5.6-1.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></span><span><b>Gemini</b><small>填入你自己的 API key 后，点评方案、写复盘、回答问题，还能听一遍接法的预听。没填时由内置教练接手。</small></span></li>
-      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span><span><b>只在本机</b><small>歌曲在你的浏览器里解码和分析，不上传。只有你点“听一遍”时，才会把约一分钟的预听发给 Google。曲库里的 6 首是浏览器现场合成的原创曲，自带调性标签；你上传的歌由分析器来测。“在线找”到的歌来自 Internet Archive，按各自的 CC 协议使用，只下载到这台电脑。</small></span></li>
+      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 18V6M9 18v-8M14 18V9M19 18v-5"/></svg></span><span><b>规则引擎</b><small>测速度、找乐句、排方案、打分。每次结果都一样。</small></span></li>
+      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3.5l1.9 5.6 5.6 1.9-5.6 1.9L11 18.5l-1.9-5.6L3.5 11l5.6-1.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></span><span><b>教练</b><small>点评方案、写复盘、回答问题，还能听一遍你选的接法。右上角填入 API key 后开始。</small></span></li>
+      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span><span><b>曲库</b><small>自带的 6 首是现场合成的原创曲，带调性标签；你上传的歌由分析器来测。“在线找”到的歌来自 Internet Archive，按各自的 CC 协议使用。</small></span></li>
     </ul>
-    <p class="about-note">Segue 是一个 AI 产品作品集 Demo。</p>
   </div>
 </dialog>
 
@@ -915,7 +914,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
     </form>
     <div class="find-chips" id="findChips" role="group" aria-label="风格"></div>
     <div class="find-list" id="findList" aria-live="polite"></div>
-    <p class="find-note"><span>来自 Internet Archive 的网络厂牌，CC 授权。点一首下载到本机。</span><button class="linkbtn" type="button" id="findMore">换一批</button></p>
+    <p class="find-note"><span>来自 Internet Archive 的网络厂牌，CC 授权。</span><button class="linkbtn" type="button" id="findMore">换一批</button></p>
   </div>
 </dialog>
 
@@ -932,7 +931,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
       <button class="btn sm primary" type="submit" id="gemSave">保存</button>
     </form>
     <p class="gem-msg" id="gemMsg" aria-live="polite"></p>
-    <p class="find-note"><span>key 只存在这个浏览器里，只发给 Google。提问会带上两首歌的分析数据。</span><span class="gem-acts"><a class="linkbtn" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">申请 key</a><button class="linkbtn" type="button" id="gemClear" hidden>清除</button></span></p>
+    <p class="find-note"><span></span><span class="gem-acts"><a class="linkbtn" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">申请 key</a><button class="linkbtn" type="button" id="gemClear" hidden>清除</button></span></p>
   </div>
 </dialog>
 
@@ -969,7 +968,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
         </div>
         <p class="crate-note">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-          可直接拖入 MP3 · WAV · M4A　只在本机分析，不上传
+          可直接拖入 MP3 · WAV · M4A
         </p>
       </section>
     </div>
@@ -1072,7 +1071,7 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
 </main>
 
 <footer class="site-foot">
-  <span>Segue · 一个 AI 产品作品集 Demo</span>
+  <span>Segue</span>
   <button id="footHelp">怎么玩</button>
 </footer>
 

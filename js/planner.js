@@ -274,7 +274,7 @@ const Coach = (() => {
       if (!r.ok || err) throw { code: r.status === 429 ? 'rate_limited' : 'failed', status: r.status, message: (err && err.message) || `HTTP ${r.status}` };
       const out = (d.steps || []).filter(st => st.type === 'model_output').pop();
       const text = out ? (out.content || []).filter(x => x.type === 'text').map(x => x.text).join('').trim() : '';
-      if (!text) throw { code: 'failed', message: `Gemini 没有给出回答${d.status ? `（${d.status}）` : ''}。` };
+      if (!text) throw { code: 'failed', message: `没有收到回答${d.status ? `（${d.status}）` : ''}。` };
       return text;
     };
     const call = async (input, opts = {}) => {
