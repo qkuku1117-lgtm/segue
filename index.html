@@ -840,6 +840,19 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
 @media (hover: hover) and (pointer: fine) { .find-row:not(.sk):hover { background: var(--booth-2); } .find-chips button:not(.on):hover { color: var(--text); } .find-src:hover { color: var(--text); } }
 @media (max-width: 520px) { .find-pick { grid-template-columns: minmax(0, 1fr) auto; } .find-pick .c-dur { display: none; } }
 @media (prefers-reduced-motion: reduce) { .find-row.sk { animation: none; } }
+
+/* ---------- the coach sheet: one setting, the player's own Gemini key ---------- */
+.coach-now { margin: 0 0 16px; font-size: 15px; line-height: 1.5; color: var(--dim); }
+.gem { display: flex; flex-wrap: wrap; gap: 8px; }
+.gem input, .gem select { height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: var(--booth); color: var(--text); font: inherit; font-size: 15px; outline: none; -webkit-appearance: none; appearance: none; }
+.gem input { flex: 1 1 220px; min-width: 0; }
+.gem input::placeholder { color: var(--dim); }
+.gem input:focus-visible, .gem select:focus-visible { box-shadow: inset 0 0 0 2px var(--coach); }
+.gem-msg { min-height: 20px; margin: 12px 2px 0; font-size: 13px; line-height: 1.5; color: var(--dim); overflow-wrap: anywhere; }
+.gem-msg.bad { color: var(--hot); }
+.gem-acts { display: inline-flex; gap: 16px; }
+.gem-acts a { text-decoration: none; }
+.ask-chips .hear { font-weight: 600; color: var(--coach-text); }
 </style>
 
 <header class="top">
@@ -883,8 +896,8 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
     <h3>关于</h3>
     <ul class="about">
       <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 18V6M9 18v-8M14 18V9M19 18v-5"/></svg></span><span><b>规则引擎</b><small>测速度、找乐句、排方案、打分。每次结果都一样，离线也能用。</small></span></li>
-      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3.5l1.9 5.6 5.6 1.9-5.6 1.9L11 18.5l-1.9-5.6L3.5 11l5.6-1.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></span><span><b>Claude</b><small>在 claude.ai 里打开时，点评方案、写复盘、回答问题。不在线时由内置教练接手。</small></span></li>
-      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span><span><b>只在本机</b><small>歌曲在你的浏览器里解码和分析，不上传。曲库里的 6 首是浏览器现场合成的原创曲，自带调性标签；你上传的歌由分析器来测。“在线找”到的歌来自 Internet Archive，按各自的 CC 协议使用，只下载到这台电脑。</small></span></li>
+      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M11 3.5l1.9 5.6 5.6 1.9-5.6 1.9L11 18.5l-1.9-5.6L3.5 11l5.6-1.9zM18.5 14.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></span><span><b>Gemini</b><small>填入你自己的 API key 后，点评方案、写复盘、回答问题，还能听一遍接法的预听。没填时由内置教练接手。</small></span></li>
+      <li><span class="g-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="5" y="10.5" width="14" height="9.5" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/></svg></span><span><b>只在本机</b><small>歌曲在你的浏览器里解码和分析，不上传。只有你点“听一遍”时，才会把约一分钟的预听发给 Google。曲库里的 6 首是浏览器现场合成的原创曲，自带调性标签；你上传的歌由分析器来测。“在线找”到的歌来自 Internet Archive，按各自的 CC 协议使用，只下载到这台电脑。</small></span></li>
     </ul>
     <p class="about-note">Segue 是一个 AI 产品作品集 Demo。</p>
   </div>
@@ -903,6 +916,23 @@ nav.steps button.on, .seg button.on { background: transparent; color: var(--ink)
     <div class="find-chips" id="findChips" role="group" aria-label="风格"></div>
     <div class="find-list" id="findList" aria-live="polite"></div>
     <p class="find-note"><span>来自 Internet Archive 的网络厂牌，CC 授权。点一首下载到本机。</span><button class="linkbtn" type="button" id="findMore">换一批</button></p>
+  </div>
+</dialog>
+
+<dialog class="sheet" id="coach" aria-labelledby="coachTitle">
+  <div class="sheet-in">
+    <div class="sheet-head">
+      <h2 id="coachTitle">教练</h2>
+      <button class="icon-btn" id="coachClose" aria-label="关闭"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <p class="coach-now" id="coachNow"></p>
+    <form class="gem" id="gemForm">
+      <input id="gemKey" type="password" placeholder="Gemini API key" aria-label="Gemini API key" autocomplete="off" spellcheck="false">
+      <select id="gemModel" aria-label="模型"></select>
+      <button class="btn sm primary" type="submit" id="gemSave">保存</button>
+    </form>
+    <p class="gem-msg" id="gemMsg" aria-live="polite"></p>
+    <p class="find-note"><span>key 只存在这个浏览器里，只发给 Google。提问会带上两首歌的分析数据。</span><span class="gem-acts"><a class="linkbtn" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">申请 key</a><button class="linkbtn" type="button" id="gemClear" hidden>清除</button></span></p>
   </div>
 </dialog>
 

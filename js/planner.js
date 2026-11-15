@@ -3,10 +3,10 @@
  * Division of labour (the core product decision):
  *   - The rule engine turns analysis into executable transition scripts:
  *     exact bars, exact knob targets. Deterministic, testable, scorable.
- *   - Claude (when the viewer allows it) judges and explains: which script
- *     suits this learner, why it sounds good, what beginners get wrong,
- *     and answers questions. It never has to be right about timing.
- *   - With no Claude available the rule engine's own copy is shown. */
+ *   - Gemini (once the player has entered an API key) judges and explains:
+ *     which script suits this learner, why it sounds good, what beginners get
+ *     wrong, and answers questions. It never has to be right about timing.
+ *   - With no key the rule engine's own copy is shown. */
 const Planner = (() => {
   const CTRL_NAME = { fader: '音量推子', low: 'LOW', mid: 'MID', high: 'HIGH', filter: 'FILTER', echo: 'ECHO', play: 'PLAY', sync: 'SYNC' };
   const DEFAULTS = {
@@ -245,53 +245,75 @@ const Planner = (() => {
   return { make, stateAt, evaluate, CTRL_NAME, DEFAULTS, METRIC_LABEL };
 })();
 
-/* The AI coach. Three places it can get Claude from, tried in this order:
- *   - on claude.ai, the artifact's `sample` capability (when the viewer allows it)
- *   - on your own computer, the launcher (tools/serve.py), which passes questions to the Claude installed there
- *   - neither: the rule engine's own words */
+/* The AI coach is Gemini, called straight from this page with the player's own API key.
+ *   - the key lives in this browser only (localStorage) and is sent to Google and nowhere else
+ *   - Gemini writes: which plan to practise first and why, the review after a run, answers to questions
+ *   - Gemini listens: a one-minute preview of the chosen transition, rendered here and sent on request
+ *   - with no key, or when a call fails, the rule engine's own words are shown instead */
 const Coach = (() => {
-  let sample = null, state = 'checking';
+  const STORE = 'segue.gemini.v1', API = 'https://generativelanguage.googleapis.com/v1beta/interactions';
+  const MODELS = [['gemini-4-hydrogen', 'Gemini 4 Hydrogen'], ['gemini-3.8-flash', 'Gemini 3.8 Flash'], ['gemini-4-carbon', 'Gemini 4 Carbon']];
+  const SYSTEM = '你是 Segue 的 AI 混音教练。严格按照用户消息里给出的角色、数据和输出格式回答，不要寒暄，不要解释你在做什么。';
+  let cfg = null, sample = null, state = 'offline', lastError = '';
   const listeners = [];
   const emit = () => listeners.forEach(f => f(state));
 
-  (async () => {
-    try {
-      if (window.claude && typeof window.claude.use === 'function') sample = await window.claude.use('sample');
-    } catch (e) { sample = null; }
-    if (!sample) sample = await localSample();
-    state = sample ? 'online' : 'offline';
-    emit();
-  })();
-
-  // Played locally: the same two calls the artifact offers, answered by the launcher on this computer.
-  async function localSample() {
-    if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return null;
-    const head = { 'X-Segue': '1' };
-    try {
-      const r = await fetch('/api/coach', { headers: head });
-      if (!r.ok || !(await r.json()).ok) return null;
-    } catch (e) { return null; }
-    const call = async (input, opts = {}) => {
-      const messages = typeof input === 'string' ? [{ role: 'user', content: input }] : input;
-      let r, d = {};
+  // One request to the Interactions API. `input` is a string, a list of content parts, or a list of turns.
+  function gemini(c) {
+    const post = async (input, opts = {}) => {
+      let r, d;
       try {
-        r = await fetch('/api/coach', { method: 'POST', headers: { ...head, 'Content-Type': 'application/json' }, body: JSON.stringify({ messages }), signal: opts.signal });
+        r = await fetch(API, {
+          method: 'POST', signal: opts.signal,
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': c.key },
+          body: JSON.stringify({ model: c.model, input, system_instruction: SYSTEM, store: false, generation_config: { thinking_level: 'low' } }),
+        });
         d = await r.json();
-      } catch (e) { throw { code: 'failed', message: String(e) }; }
-      if (!r.ok || !d.text) throw { code: d.code || 'failed', message: d.error || 'no answer' };
-      if (opts.onText) opts.onText({ text: d.text, delta: d.text });
-      return { text: d.text, truncated: false };
+      } catch (e) { throw { code: 'failed', message: '连不上 Google，检查一下网络。' }; }
+      const err = Array.isArray(d) ? d[0] && d[0].error : d && d.error;
+      if (!r.ok || err) throw { code: r.status === 429 ? 'rate_limited' : 'failed', status: r.status, message: (err && err.message) || `HTTP ${r.status}` };
+      const out = (d.steps || []).filter(st => st.type === 'model_output').pop();
+      const text = out ? (out.content || []).filter(x => x.type === 'text').map(x => x.text).join('').trim() : '';
+      if (!text) throw { code: 'failed', message: `Gemini 没有给出回答${d.status ? `（${d.status}）` : ''}。` };
+      return text;
+    };
+    const call = async (input, opts = {}) => {
+      const turns = typeof input === 'string' ? input
+        : input.map(t => ({ type: t.role === 'assistant' ? 'model_output' : 'user_input', content: [{ type: 'text', text: t.content }] }));
+      const text = await post(turns, opts);
+      if (opts.onText) opts.onText({ text, delta: text });
+      return { text, truncated: false };
     };
     call.json = async (prompt, opts) => {
       const { text } = await call(prompt, opts), m = text.match(/\{[\s\S]*\}/);
       return JSON.parse(m ? m[0] : text);
     };
+    // a question with a sound attached: 16-bit mono WAV, base64
+    call.audio = (prompt, wav, opts) => post([{ type: 'text', text: prompt }, { type: 'audio', data: wav, mime_type: 'audio/wav' }], opts);
     return call;
   }
 
+  const saved = () => {
+    try { const c = JSON.parse(localStorage.getItem(STORE) || 'null'); return c && typeof c.key === 'string' && c.key ? { key: c.key, model: c.model || MODELS[0][0] } : null; }
+    catch (e) { return null; }
+  };
+  function use(c) { cfg = c; sample = c ? gemini(c) : null; state = sample ? 'online' : 'offline'; lastError = ''; emit(); }
+  // Try the key with one tiny question before keeping it, so a typo shows up here and not in the middle of a lesson.
+  async function connect(key, model) {
+    key = String(key || '').trim() || (cfg ? cfg.key : '');   // an empty field keeps the stored key: only the model changes
+    if (!key) return { ok: false, message: '先填入 API key。' };
+    try { await gemini({ key, model })('只回复两个字：收到'); }
+    catch (e) { return { ok: false, message: e.message || '没连上。' }; }
+    try { localStorage.setItem(STORE, JSON.stringify({ key, model })); } catch (e) { /* private window: the key lasts until the page closes */ }
+    use({ key, model });
+    return { ok: true };
+  }
+  function forget() { try { localStorage.removeItem(STORE); } catch (e) { /* nothing stored */ } use(null); }
+  use(saved());
+
   function fail(e) {
-    if (e && (e.code === 'not_granted' || e.code === 'unavailable')) { sample = null; state = 'offline'; emit(); }
-    else if (e && e.code === 'rate_limited') { state = 'busy'; emit(); setTimeout(() => { if (sample) { state = 'online'; emit(); } }, 30000); }
+    lastError = (e && e.message) || '';
+    if (e && e.code === 'rate_limited') { state = 'busy'; emit(); setTimeout(() => { if (sample) { state = 'online'; emit(); } }, 30000); }
   }
 
   const PERSONA = '你是 Segue 的 AI 混音教练：一位耐心、专业、说话口语化的俱乐部 DJ，正在教第一次接触打碟的新手。只用中文回答，不用 Markdown 标题，不编造数据里没有的事实。两首歌一律叫“前一首”和“后一首”，不要写 A、B 或 Deck。';
@@ -341,7 +363,7 @@ const Coach = (() => {
 {"pick":"<方案 id>","headline":"<不超过 16 个字的推荐理由>","plans":{"<id>":{"why":"<不超过 24 个字，口语>","pitfall":"<不超过 18 个字>"}}}
 数据：${JSON.stringify(data)}`;
     try {
-      const r = await sample.json(prompt, { modelTier: 'quick' });
+      const r = await sample.json(prompt);
       if (!r || !r.plans || !planset.plans.some(p => p.id === r.pick)) return null;
       r.headline = noAB(r.headline);
       Object.values(r.plans).forEach(x => { if (x) { x.why = noAB(x.why); x.pitfall = noAB(x.pitfall); } });
@@ -356,7 +378,7 @@ const Coach = (() => {
 新手刚刚练完一次「${plan.name} ${plan.en}」过渡。下面是系统测到的结果（0-100）。
 用一句话点评，不超过 32 个字：先说听众会听到的最大问题，再给下一次一个具体动作。如果做得很好，就具体夸一处。只输出这一句，不要引号、编号或换行。
 数据：${JSON.stringify({ ...summary(A, B, plan), total: result.total, 交接完成: result.handover, metrics: Object.fromEntries(Object.entries(m).map(([k, v]) => [Planner.METRIC_LABEL[k], Math.round(v * 100)])), lowClashBeats: +result.clashBeats.toFixed(1), worstBeatOffsetMs: Math.round(result.worstPhase), steps })}`;
-    try { return noAB((await sample(prompt, { modelTier: 'quick', onText: onText ? ({ text }) => onText(noAB(text)) : undefined })).text); }
+    try { return noAB((await sample(prompt, { onText: onText ? ({ text }) => onText(noAB(text)) : undefined })).text); }
     catch (e) { fail(e); return null; }
   }
 
@@ -366,7 +388,23 @@ const Coach = (() => {
 回答控制在 120 个字以内，能结合下面这两首歌的数据就结合。
 当前情境：${JSON.stringify(summary(A, B, plan))}`;
     const turns = history.map((t, i) => ({ role: t.role, content: i === 0 ? `${ctx}\n\n学员的问题：${t.content}` : t.content }));
-    try { return noAB((await sample(turns, { modelTier: 'quick', cache: false, onText: ({ text }) => onText(noAB(text)) })).text); }
+    try { return noAB((await sample(turns, { onText: ({ text }) => onText(noAB(text)) })).text); }
+    catch (e) { fail(e); return null; }
+  }
+
+  /* Let the model hear it. `wav` is the chosen transition as it would sound if every move were made on time:
+   * `lead` bars of the first song alone, the transition itself, then the same number of bars of the second song alone. */
+  async function listen(wav, secs, lead, A, B, plan) {
+    if (!sample) return null;
+    const prompt = `${PERSONA}
+附带的音频是这两首歌按「${plan.name}」方案叠在一起的预听，共约 ${Math.round(secs)} 秒，由程序按方案的每一步自动操作渲染：开头 ${lead} 小节只有前一首，接着 ${plan.len} 小节是过渡，最后 ${lead} 小节只剩后一首。
+请真的去听，然后用不超过 120 个字说三件事：
+1. 两首叠在一起时，旋律或人声有没有打架，大约在第几秒；
+2. 低频和整体听感有没有发浑、发挤或者空掉的地方；
+3. 新手最该调整的一个动作。
+听不出来的就直说听不出来，不要根据下面的数据去猜你没听到的东西。
+程序测到的数据，供对照：${JSON.stringify(summary(A, B, plan))}`;
+    try { return noAB(await sample.audio(prompt, wav)); }
     catch (e) { fail(e); return null; }
   }
 
@@ -418,6 +456,8 @@ const Coach = (() => {
 
   return {
     get state() { return state; }, onState(f) { listeners.push(f); f(state); },
-    reviewPlans, review, ask, FAQ, fallbackPlanCopy, fallbackReview,
+    name: 'Gemini', MODELS, connect, forget,
+    get model() { return cfg ? cfg.model : MODELS[0][0]; }, get lastError() { return lastError; },
+    reviewPlans, review, ask, listen, FAQ, fallbackPlanCopy, fallbackReview,
   };
 })();

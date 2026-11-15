@@ -693,7 +693,7 @@
       box.append(h('button', { class: 'plan' + (enter ? ' pre' : ''), style: `transition-delay:${enter ? i * 70 : 0}ms`, 'data-plan': p.id, onclick: () => paintPick(p.id) },
         h('span', { class: 'plan-head' },
           h('span', {}, h('span', { class: 'plan-name' }, p.name), h('span', { class: 'plan-line' }, PLAN_LINE[p.id](p))),
-          h('span', { class: 'fit' }, h('b', {}, String(p.fit)), h('small', { class: p.id === pickId ? 'pick' : '' }, p.id === pickId ? (ai ? 'Claude 推荐' : '推荐') : '适合度'))),
+          h('span', { class: 'fit' }, h('b', {}, String(p.fit)), h('small', { class: p.id === pickId ? 'pick' : '' }, p.id === pickId ? (ai ? `${Coach.name} 推荐` : '推荐') : '适合度'))),
         h('span', { class: 'plan-meta' },
           h('span', {}, `${p.len} 小节`),
           h('span', { class: 'dots', 'aria-label': `难度 ${p.difficulty} / 3` }, ...[1, 2, 3].map(n => h('i', { class: n <= p.difficulty ? 'on' : '' }))),
@@ -720,7 +720,7 @@
     $('#barName').textContent = p.name;
     $('#barLine').textContent = PLAN_LINE[p.id](p);
     $('#barMeta').textContent = `${p.len} 小节 · 约 ${Math.round(p.len * 240 / S.tracks.A.an.bpm)} 秒 · ${p.actions.length} 个动作`;
-    $('#whoSays').textContent = id !== pickId ? '' : ai ? 'Claude 推荐。' : pending ? 'Claude 在看…' : p.tempoGap ? '速度差得多，推荐这种。' : '推荐。';
+    $('#whoSays').textContent = id !== pickId ? '' : ai ? `${Coach.name} 推荐。` : pending ? `${Coach.name} 在看…` : p.tempoGap ? '速度差得多，推荐这种。' : '推荐。';
     $('#claudeLine').classList.toggle('ai', !!ai);
     $('#barWhy').textContent = copy.why;
     $('#barPit').textContent = copy.pitfall || '';
@@ -787,14 +787,74 @@
         if (text) { a.textContent = text; S.chat.push({ role: 'assistant', content: text }); busy = false; return; }
         S.chat.pop();
       }
-      a.textContent = faq ? faq.a : '现在没连上 Claude，先看看上面几个问题。';
+      a.textContent = faq ? faq.a : Coach.state === 'offline' ? '填入 Gemini API key 之后可以随便问，先看看上面几个问题。' : Coach.lastError || '这次没答上来，再问一次。';
       busy = false;
     };
+    // the plan on screen: the one picked on the plans page, the one just practised on the review page
+    const plan = () => (S.view !== 'plans' && S.plan) || (S.planset && S.planset.plans.find(p => p.id === (S.picked || S.planset.pickId)));
+    const hear = async () => {
+      const p = plan();
+      if (!p || busy) return;
+      busy = true;
+      box.classList.add('open');
+      log.append(h('div', { class: 'msg q' }, `听一遍「${p.name}」`));
+      const a = h('div', { class: 'msg a' }, '正在把这段接法混出来…');
+      log.append(a);
+      try {
+        const mix = await renderPreview(p);
+        a.textContent = `${Coach.name} 在听…`;
+        const text = await Coach.listen(mix.wav, mix.secs, mix.lead, S.tracks.A, S.tracks.B, p);
+        if (text) { a.textContent = text; S.chat.push({ role: 'user', content: `（你刚听了「${p.name}」的预听）` }, { role: 'assistant', content: text }); }
+        else a.textContent = Coach.lastError || '这次没听成，再试一次。';
+      } catch (e) { a.textContent = '预听没混出来，换一种接法试试。'; }
+      busy = false;
+    };
+    const online = Coach.state !== 'offline';
     box.append(
       h('button', { class: 'btn sm quiet ask-toggle', 'aria-expanded': 'false', onclick: e => { const o = box.classList.toggle('open'); e.currentTarget.setAttribute('aria-expanded', o); } }, '问教练'),
-      h('div', { class: 'ask-chips' }, ...Coach.FAQ.map(f => h('button', { onclick: () => send(f.q) }, f.q))),
-      Coach.state === 'online' ? h('form', { onsubmit: e => { e.preventDefault(); send(input.value); } }, input, h('button', { class: 'btn', type: 'submit', 'aria-label': '发送' }, '发送')) : '',
+      h('div', { class: 'ask-chips' }, online && plan() ? h('button', { class: 'hear', onclick: hear }, `让 ${Coach.name} 听一遍`) : '', ...Coach.FAQ.map(f => h('button', { onclick: () => send(f.q) }, f.q))),
+      online ? h('form', { onsubmit: e => { e.preventDefault(); send(input.value); } }, input, h('button', { class: 'btn', type: 'submit', 'aria-label': '发送' }, '发送')) : '',
       log);
+  }
+
+  /* The chosen transition as it would sound with every move made on time, mixed off-line: nothing is played.
+     The same signal path as the decks (auto gain, three-band EQ, filter, fader) driven by the plan's own script.
+     Mono at 16 kHz keeps a minute of music near 2 MB, and a listening model keeps no more than that anyway. */
+  async function renderPreview(p) {
+    const A = S.tracks.A, B = S.tracks.B, SR = 16000, lead = 2, bar = A.an.beat * 4;
+    const secs = (p.len + lead * 2) * bar;
+    const oc = new OfflineAudioContext(1, Math.ceil(secs * SR), SR);
+    const out = oc.createGain(); out.gain.value = 0.6; out.connect(oc.destination);
+    const bq = (type, f, q) => { const n = oc.createBiquadFilter(); n.type = type; n.frequency.value = f; if (q) n.Q.value = q; return n; };
+    const deck = (t, rate) => {
+      const d = { src: oc.createBufferSource(), trim: oc.createGain(), low: bq('lowshelf', 220), mid: bq('peaking', 1000, 0.8), high: bq('highshelf', 3200), hpf: bq('highpass', 20, 1), lpf: bq('lowpass', 20000, 1), fader: oc.createGain() };
+      d.src.buffer = t.buffer; d.src.playbackRate.value = rate;
+      d.trim.gain.value = t.an.loud > 0 ? clamp(0.215 / t.an.loud, 0.5, 2) : 1;
+      d.src.connect(d.trim).connect(d.low).connect(d.mid).connect(d.high).connect(d.hpf).connect(d.lpf).connect(d.fader).connect(out);
+      return d;
+    };
+    const dA = deck(A, 1), dB = deck(B, A.an.bpm / B.an.bpm);
+    for (let rel = -lead; rel <= p.len + lead + 1e-6; rel += 0.25) {
+      const st = Planner.stateAt(p, rel), t = (rel + lead) * bar;
+      for (const [d, c] of [[dA, st.A], [dB, st.B]]) {
+        const set = (param, v) => (t === 0 ? param.setValueAtTime(v, 0) : param.linearRampToValueAtTime(v, t));
+        set(d.low.gain, Engine.eqDb(c.low)); set(d.mid.gain, Engine.eqDb(c.mid)); set(d.high.gain, Engine.eqDb(c.high));
+        set(d.hpf.frequency, Engine.hpfHz(c.filter)); set(d.lpf.frequency, Engine.lpfHz(c.filter)); set(d.fader.gain, c.fader * c.fader);
+      }
+    }
+    dA.src.start(0, Math.max(0, A.an.barTime(p.startA - lead)));
+    dB.src.start((p.playBar + lead) * bar, Math.max(0, B.an.barTime(p.cueB)));
+    const pcm = (await oc.startRendering()).getChannelData(0), n = pcm.length;
+    const buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+    const str = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    str(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); str(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, SR, true); v.setUint32(28, SR * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, n * 2, true);
+    let peak = 0;
+    for (let i = 0; i < n; i++) { const x = Math.max(-1, Math.min(1, pcm[i])); if (Math.abs(x) > peak) peak = Math.abs(x); v.setInt16(44 + i * 2, x * 32767, true); }
+    const bytes = new Uint8Array(buf);
+    let bin = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return { wav: btoa(bin), secs, lead, peak, bytes: bytes.length };
   }
 
   /* ================= view 3 · practice ================= */
@@ -1282,7 +1342,7 @@
     const fallback = Coach.fallbackReview(r).split('\n').pop().replace(/^·\s*(下次目标：)?/, '');
     const offline = () => { line.classList.remove('ai'); who.textContent = '教练：'; cm.textContent = fallback; };
     if (Coach.state === 'online') {
-      line.classList.add('ai'); who.textContent = 'Claude：'; cm.textContent = '正在写点评…';
+      line.classList.add('ai'); who.textContent = `${Coach.name}：`; cm.textContent = '正在写点评…';
       Coach.review(S.tracks.A, S.tracks.B, p, r, t => { if (S.result === R) cm.textContent = t; }).then(t => {
         if (S.result !== R) return;
         if (t) cm.textContent = t.trim(); else offline();
@@ -1422,9 +1482,39 @@
   function updateChip(state) {
     const chip = $('#aiChip');
     chip.dataset.state = state;
-    chip.querySelector('span').textContent = { checking: '连接中', online: 'Claude 在线', offline: '内置教练', busy: 'Claude 稍后再试' }[state];
-    chip.title = state === 'online' ? '方案点评、复盘和问答由 Claude 实时生成。点开看分工' : '现在由内置教练讲解。在 claude.ai 里打开，Claude 会接管点评和问答。点开看分工';
+    chip.querySelector('span').textContent = { online: `${Coach.name} 在线`, offline: '内置教练', busy: `${Coach.name} 稍后再试` }[state];
+    chip.title = state === 'offline' ? '现在由内置教练讲解。点开填入 Gemini API key' : `方案点评、复盘和问答由 ${Coach.name} 生成。点开设置`;
     if (S.view === 'plans' && state === 'online' && !S.aiPlans) renderPlans();
+    // the ask panel offers different things with and without a model behind it
+    const on = state !== 'offline';
+    if (on !== chipOn) {
+      chipOn = on;
+      if (S.view === 'plans') askPanel($('#askPlans'));
+      if (S.view === 'review') askPanel($('#askReview'));
+    }
+  }
+  let chipOn = null;
+
+  // the coach sheet: who is talking, and the one setting this product has
+  function openCoach() {
+    const on = Coach.state !== 'offline', sel = $('#gemModel');
+    if (!sel.childElementCount) sel.append(...Coach.MODELS.map(([id, name]) => h('option', { value: id }, name)));
+    sel.value = Coach.model;
+    $('#coachNow').textContent = on ? `${Coach.name} 在讲解。` : '现在是内置教练。填入 Gemini API key，换成 Gemini 来讲。';
+    $('#gemKey').value = '';
+    $('#gemKey').placeholder = on ? '已保存。填新的可以替换' : 'Gemini API key';
+    $('#gemClear').hidden = !on;
+    $('#gemMsg').textContent = ''; $('#gemMsg').classList.remove('bad');
+    if (S.preview) stopPreview();
+    if (!$('#coach').open) $('#coach').showModal();
+  }
+  async function saveCoach() {
+    const btn = $('#gemSave'), msg = $('#gemMsg');
+    btn.disabled = true; msg.classList.remove('bad'); msg.textContent = '正在问 Gemini 一句话…';
+    const r = await Coach.connect($('#gemKey').value, $('#gemModel').value);
+    btn.disabled = false;
+    if (r.ok) { openCoach(); msg.textContent = '接上了。'; }
+    else { msg.textContent = r.message; msg.classList.add('bad'); }
   }
 
   /* ---- the explainer: three steps on the first page, and the same three plus a control glossary in the help sheet ---- */
@@ -1773,7 +1863,11 @@
     $('#againBtn').addEventListener('click', () => { const id = S.result.plan.id; selectPlan(id, 'guide'); });
     $('#watchBtn').addEventListener('click', () => { const id = S.result.plan.id; selectPlan(id, 'demo'); });
     $('#otherBtn').addEventListener('click', () => go('plans'));
-    $('#aiChip').addEventListener('click', () => openHelp('about'));
+    $('#aiChip').addEventListener('click', openCoach);
+    $('#coachClose').addEventListener('click', () => $('#coach').close());
+    $('#coach').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+    $('#gemForm').addEventListener('submit', e => { e.preventDefault(); saveCoach(); });
+    $('#gemClear').addEventListener('click', () => { Coach.forget(); openCoach(); $('#gemMsg').textContent = '已清除。'; });
     $('#brandHome').addEventListener('click', e => { e.preventDefault(); go('tracks'); });
     $('#heroDemo').addEventListener('click', () => { if (S.planset) selectPlan(S.aiPlans ? S.aiPlans.pick : S.planset.pickId, 'demo'); });
     $('#newSongsBtn').addEventListener('click', () => go('tracks'));
@@ -1791,7 +1885,7 @@
     // a click on the dimmed backdrop lands on the dialog element itself
     $('#help').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
     document.addEventListener('keydown', e => {
-      if (Tour.on || $('#help').open || $('#finder').open || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (Tour.on || $('#help').open || $('#finder').open || $('#coach').open || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.target.closest('input, textarea')) return;
       if (e.key === 'm' || e.key === 'M') { setVol({ muted: !VOL.muted }); return; }
       if (e.key === '?') { openHelp(); return; }
