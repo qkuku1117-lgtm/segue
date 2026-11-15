@@ -4060,7 +4060,7 @@ const Coach = (() => {
     btn.disabled = true; msg.classList.remove('bad'); msg.textContent = '正在验证…';
     const r = await Coach.connect($('#gemKey').value, $('#gemModel').value);
     btn.disabled = false;
-    if (r.ok) { openCoach(); msg.textContent = '接上了。'; }
+    if (r.ok) { openCoach(); msg.textContent = '接上了。'; if (firstRun) setTimeout(closeCoach, 700); }
     else { msg.textContent = r.message; msg.classList.add('bad'); }
   }
 
@@ -4337,7 +4337,9 @@ const Coach = (() => {
   }
   function startTour() {
     const T = Tour;
-    if (T.on || S.view !== 'tracks' || $('#help').open) return;
+    if (T.on || S.view !== 'tracks') return;
+    T.on = true;
+    ['#help', '#finder', '#coach'].forEach(s => { if ($(s).open) $(s).close(); });
     if (S.preview) stopPreview();
     T.shade = h('div', { class: 'tour-shade' }); T.ring = h('div', { class: 'tour-ring' });
     T.n = h('span', { class: 'tour-n' }); T.t = h('h2', { id: 'tourT' }); T.d = h('p', { id: 'tourD' });
@@ -4370,6 +4372,11 @@ const Coach = (() => {
     };
     document.addEventListener('keydown', T.key, true);
     window.addEventListener('resize', T.fix); window.addEventListener('scroll', T.fix, { passive: true });
+    // the page keeps filling in underneath (songs finish loading): follow the thing being pointed at
+    if (window.ResizeObserver) {
+      T.ro = new ResizeObserver(() => { clearTimeout(T.roT); T.roT = setTimeout(T.fix, Math.max(60, 470 - (performance.now() - T.shownAt))); });
+      T.ro.observe($('main'));
+    }
     T.el.addEventListener('wheel', e => e.preventDefault(), { passive: false });
     T.el.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
     tourShow(0, true);
@@ -4377,6 +4384,18 @@ const Coach = (() => {
     const free = () => T.card.classList.remove('still');
     requestAnimationFrame(() => requestAnimationFrame(free)); setTimeout(free, 120);
   }
+  // The first visit, before anything else can be touched: the key sheet, then the walk-through.
+  // Neither waits for the songs, so nothing the visitor starts can be caught underneath.
+  let firstRun = false;
+  function welcome() {
+    if (Coach.state !== 'offline') { startTour(); return; }
+    firstRun = true;
+    $('#coach').addEventListener('close', afterCoach, { once: true });
+    openCoach();
+  }
+  // however the sheet goes away (saved, the cross, the backdrop, Esc), the walk-through follows at once
+  function afterCoach() { if (!firstRun) return; firstRun = false; startTour(); }
+  function closeCoach() { if ($('#coach').open) $('#coach').close(); afterCoach(); }
   function endTour() {
     const T = Tour;
     if (!T.on) return;
@@ -4385,6 +4404,7 @@ const Coach = (() => {
     cancelAnimationFrame(T.raf); clearTimeout(T.tm);
     document.removeEventListener('keydown', T.key, true);
     window.removeEventListener('resize', T.fix); window.removeEventListener('scroll', T.fix);
+    if (T.ro) { T.ro.disconnect(); T.ro = null; } clearTimeout(T.roT);
     T.inert.forEach(el => { el.inert = false; });
     const el = T.el;
     el.classList.add('out'); setTimeout(() => el.remove(), 260);
@@ -4411,8 +4431,8 @@ const Coach = (() => {
     $('#watchBtn').addEventListener('click', () => { const id = S.result.plan.id; selectPlan(id, 'demo'); });
     $('#otherBtn').addEventListener('click', () => go('plans'));
     $('#aiChip').addEventListener('click', openCoach);
-    $('#coachClose').addEventListener('click', () => $('#coach').close());
-    $('#coach').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+    $('#coachClose').addEventListener('click', closeCoach);
+    $('#coach').addEventListener('click', e => { if (e.target === e.currentTarget) closeCoach(); });
     $('#gemForm').addEventListener('submit', e => { e.preventDefault(); saveCoach(); });
     $('#gemClear').addEventListener('click', () => { Coach.forget(); openCoach(); $('#gemMsg').textContent = '已清除。'; });
     $('#brandHome').addEventListener('click', e => { e.preventDefault(); go('tracks'); });
@@ -4464,8 +4484,8 @@ const Coach = (() => {
     Coach.onState(updateChip);
     Engine.context();
     wireChrome();
-    // the walk-through waits for both records, so every step has something real to point at
-    Promise.allSettled([loadDemo('A'), loadDemo('B')]).then(() => { if (!tourSeen() || /[?&]tour\b/.test(location.search)) setTimeout(startTour, 300); });
+    Promise.allSettled([loadDemo('A'), loadDemo('B')]);
+    if (!tourSeen() || /[?&]tour\b/.test(location.search)) welcome();
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => pill($('nav.steps')));
     requestAnimationFrame(frame);
     // a covered or throttled page stops getting animation frames while the audio plays on: keep the clock moving

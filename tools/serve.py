@@ -28,11 +28,15 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
 
+    def end_headers(self):
+        # always the page as it is on disk, never a copy the browser kept from before a rebuild
+        self.send_header('Cache-Control', 'no-store')
+        super().end_headers()
+
     def do_GET(self):
         if self.path in ('/', '/index.html'):
             self.send_response(302)
             self.send_header('Location', '/dist/segue.html')
-            self.send_header('Cache-Control', 'no-store')
             self.end_headers()
         else:
             super().do_GET()
