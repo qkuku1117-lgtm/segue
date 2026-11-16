@@ -4,10 +4,6 @@ Segue 是一个给 DJ 新手的混音练习台。放进两首歌，它给出三�
 
 > 纯前端、零依赖、单文件。下载下来，填入你自己的 Gemini API key 就能用；不填也能练。
 
-[![示范录屏](docs/sample.jpg)](docs/sample.mp4)
-
-示范实录 · Reminder → Too Many Nights · 74 秒
-
 ![选歌](docs/1-tracks.jpg)
 
 ## 怎么用
