@@ -4,6 +4,8 @@ Segue 是一个给 DJ 新手的混音练习台。放进两首歌，它给出三�
 
 > 纯前端、零依赖、单文件。下载下来，填入你自己的 Gemini API key 就能用；不填也能练。
 
+https://github.com/user-attachments/assets/d98a183b-862e-4eb9-9479-72941c1043c7
+
 ![选歌](docs/1-tracks.jpg)
 
 ## 怎么用
